@@ -1,6 +1,40 @@
 package nvd
 
-import "time"
+import (
+	"strings"
+	"time"
+)
+
+type NVRTime struct {
+	time.Time
+}
+
+func (ct *NVRTime) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	if s == "null" {
+		return nil
+	}
+
+	// 複数のフォーマットを試行
+	formats := []string{
+		"2006-01-02T15:04:05.999999999",
+		"2006-01-02T15:04:05.999999999Z",
+		"2006-01-02T15:04:05Z",
+		time.RFC3339,
+		time.RFC3339Nano,
+	}
+
+	var err error
+	for _, format := range formats {
+		t, parseErr := time.Parse(format, s)
+		if parseErr == nil {
+			ct.Time = t
+			return nil
+		}
+		err = parseErr
+	}
+	return err
+}
 
 type APIResponse struct {
 	ResultsPerPage  int                 `json:"resultsPerPage"`
@@ -8,7 +42,7 @@ type APIResponse struct {
 	TotalResults    int                 `json:"totalResults"`
 	Format          string              `json:"format"`
 	Version         string              `json:"version"`
-	Timestamp       time.Time           `json:"timestamp"`
+	Timestamp       NVRTime             `json:"timestamp"`
 	Vulnerabilities []VulnerabilityItem `json:"vulnerabilities"`
 }
 
@@ -19,10 +53,10 @@ type VulnerabilityItem struct {
 type CVE struct {
 	ID               string          `json:"id"`
 	SourceIdentifier string          `json:"sourceIdentifier"`
-	Published        time.Time       `json:"published"`
-	LastModified     time.Time       `json:"lastModified"`
+	Published        NVRTime         `json:"published"`
+	LastModified     NVRTime         `json:"lastModified"`
 	VulnStatus       string          `json:"vulnStatus"`
-	CveTags          []string        `json:"cveTags"`
+	//CveTags          []string        `json:"cveTags"`
 	Descriptions     []Description   `json:"descriptions"`
 	Metrics          Metrics         `json:"metrics"`
 	Weaknesses       []Weakness      `json:"weaknesses"`
@@ -40,11 +74,11 @@ type Metrics struct {
 }
 
 type CVSSMetricV31 struct {
-	Source              string       `json:"source"`
-	Type                string       `json:"type"`
-	CVSSData            CVSSDataV31  `json:"cvssData"`
-	ExploitabilityScore float64      `json:"exploitabilityScore"`
-	ImpactScore         float64      `json:"impactScore"`
+	Source              string      `json:"source"`
+	Type                string      `json:"type"`
+	CVSSData            CVSSDataV31 `json:"cvssData"`
+	ExploitabilityScore float64     `json:"exploitabilityScore"`
+	ImpactScore         float64     `json:"impactScore"`
 }
 
 type CVSSDataV31 struct {
@@ -69,7 +103,8 @@ type Weakness struct {
 }
 
 type Configuration struct {
-	Nodes []Node `json:"nodes"`
+	Operator string `json:"operator,omitempty"`
+	Nodes    []Node `json:"nodes"`
 }
 
 type Node struct {
@@ -89,5 +124,5 @@ type CPEMatch struct {
 type Reference struct {
 	URL    string   `json:"url"`
 	Source string   `json:"source"`
-	Tags   []string `json:"tags,omitempty"` 
+	Tags   []string `json:"tags,omitempty"`
 }
