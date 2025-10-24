@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/nexryai/eleos/internal/db"
 	"github.com/nexryai/eleos/internal/nvd"
 )
 
@@ -34,8 +36,10 @@ func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
 }
 
 // processVulnerabilities は、取得した脆弱性情報を製品リストと照合し、マッチしたものを変換して返却します。
-func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]nvd.VulnerabilityItem, error) {
+func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vulnerability, error) {
 	fmt.Println("\n--- Displaying results ---")
+
+	dbVulnerabilities := []db.Vulnerability{}
 
 	for _, item := range *vulnerabilities {
 		var matchedProduct string
@@ -77,8 +81,7 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]nvd.Vu
 						}
 					}
 
-					// ここに到達する場合は、shouldMatchAllCPEsかつCPEMatchがすべてマッチした場合 or shouldMatchAllNodesかつCPEMatchがすべてマッチしなかった場合
-
+					// ここに到達する場合は...
 					if shouldMatchAllNodes {
 						// shouldMatchAllNodesである場合、すべてのCPEMatchがマッチしなかった（＝条件を満たさないNodeが存在した）ということなので次のProductをチェック
 						continue ProductLoop
@@ -120,7 +123,16 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]nvd.Vu
 		} else {
 			fmt.Println("  No English description found.")
 		}
+
+		dbVuln := db.Vulnerability{
+			CVE:         item.CVE.ID,
+			PublishedAt: item.CVE.Published.Time,
+			Description: enDesc,
+			ProductID:   uuid.MustParse(matchedProduct),
+		}
+
+		dbVulnerabilities = append(dbVulnerabilities, dbVuln)
 	}
 
-	return vulnerabilities, nil
+	return &dbVulnerabilities, nil
 }
