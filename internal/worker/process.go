@@ -1,0 +1,126 @@
+package worker
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/nexryai/eleos/internal/nvd"
+)
+
+func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
+    start := time.Date(2025, 9, 25, 15, 45, 0, 0, time.UTC)
+	end := time.Date(2025, 9, 25, 16, 00, 0, 0, time.UTC)
+
+	fmt.Printf("Fetching vulnerabilities modified between %s and %s\n",
+		start.Format(time.RFC3339),
+		end.Format(time.RFC3339),
+	)
+
+	// nvd パッケージの関数を呼び出します
+	vulnerabilities, err := nvd.FetchVulnerabilities(start, end)
+	if err != nil {
+		fmt.Printf("Error fetching vulnerabilities: %v\n", err)
+		return nil, fmt.Errorf("error fetching vulnerabilities: %w", err)
+	}
+
+	if vulnerabilities == nil || len(*vulnerabilities) == 0 {
+		fmt.Println("No vulnerabilities found in the specified date range.")
+		return nil, nil
+	}
+
+	fmt.Printf("\nSuccessfully fetched %d total vulnerabilities.\n", len(*vulnerabilities))
+
+	return vulnerabilities, nil
+}
+
+// processVulnerabilities は、取得した脆弱性情報を製品リストと照合し、マッチしたものを変換して返却します。
+func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]nvd.VulnerabilityItem, error) {
+	fmt.Println("\n--- Displaying results ---")
+
+	for _, item := range *vulnerabilities {
+		var matchedProduct string
+
+	ProductLoop:
+		for _, product := range products {
+
+			for _, cfg := range item.CVE.Configurations {
+				// OperatorがANDの場合、
+				shouldMatchAllNodes := cfg.Operator == "AND"
+
+			NodeLoop:
+				for _, node := range cfg.Nodes {
+					shouldMatchAllCPEs := cfg.Operator == "AND"
+
+				CPEMatchLoop:
+					for _, cpe := range node.CPEMatch {
+						if product.CheckCPE(cpe.Criteria) {
+							fmt.Printf("Product %s matched for CVE ID: %s\n", product.UUID(), item.CVE.ID)
+							matchedProduct = product.UUID()
+
+							if shouldMatchAllCPEs {
+								// shouldMatchAllCPEs が true の場合、次のCPEMatchをチェック
+								continue CPEMatchLoop
+							}
+
+							if shouldMatchAllNodes {
+								// shouldMatchAllNodesかつshouldMatchAllCPEsがfalseの場合、1つマッチした時点で次のNodeをチェック
+								continue NodeLoop
+							} 
+
+							// すべてのオペレーターがORであるため、1つマッチした時点で該当と判断する
+							goto matched
+						} else {
+							if shouldMatchAllCPEs {
+								// shouldMatchAllCPEs が true の場合、1つでもマッチしなければ該当しないため次のProductをチェック
+								continue ProductLoop
+							}
+						}
+					}
+
+					// ここに到達する場合は、shouldMatchAllCPEsかつCPEMatchがすべてマッチした場合 or shouldMatchAllNodesかつCPEMatchがすべてマッチしなかった場合
+
+					if shouldMatchAllNodes {
+						// shouldMatchAllNodesである場合、すべてのCPEMatchがマッチしなかった（＝条件を満たさないNodeが存在した）ということなので次のProductをチェック
+						continue ProductLoop
+					} else if shouldMatchAllCPEs {
+						// shouldMatchAllCPEsである場合、すべてのCPEMatchがマッチしたということなのでマッチしたと判断
+						goto matched
+					}
+				}
+
+				if shouldMatchAllNodes {
+					// ここに到達する場合、すべてのNodeがマッチしたということなのでマッチしたと判断
+					goto matched
+				}
+			}
+		}
+
+		continue
+
+	matched:
+		fmt.Printf("\nCVE ID: %s\n", item.CVE.ID)
+		fmt.Printf("  Matched Product UUID: %s\n", matchedProduct)
+
+		// 英語の説明を探して表示
+		var enDesc string
+		for _, desc := range item.CVE.Descriptions {
+			if desc.Lang == "en" {
+				enDesc = desc.Value
+				break
+			}
+		}
+
+		if enDesc != "" {
+			// 説明が長いので、最初の100文字だけ表示
+			if len(enDesc) > 100 {
+				fmt.Printf("  Description (en): %s...\n", enDesc[:100])
+			} else {
+				fmt.Printf("  Description (en): %s\n", enDesc)
+			}
+		} else {
+			fmt.Println("  No English description found.")
+		}
+	}
+
+	return vulnerabilities, nil
+}
