@@ -2,6 +2,7 @@ package worker
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,7 +11,7 @@ import (
 )
 
 func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
-    start := time.Date(2025, 9, 25, 15, 45, 0, 0, time.UTC)
+	start := time.Date(2025, 9, 25, 15, 45, 0, 0, time.UTC)
 	end := time.Date(2025, 9, 25, 16, 00, 0, 0, time.UTC)
 
 	fmt.Printf("Fetching vulnerabilities modified between %s and %s\n",
@@ -68,7 +69,7 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
 							if shouldMatchAllNodes {
 								// shouldMatchAllNodesかつshouldMatchAllCPEsがfalseの場合、1つマッチした時点で次のNodeをチェック
 								continue NodeLoop
-							} 
+							}
 
 							// すべてのオペレーターがORであるため、1つマッチした時点で該当と判断する
 							goto matched
@@ -123,10 +124,37 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
 			fmt.Println("  No English description found.")
 		}
 
+		// スコアを取得。該当しないバージョンは0にする
+		var cvss40 int32 = 0
+		var cvss31 int32 = 0
+		var cvss30 int32 = 0
+		var cvss20 int32 = 0
+
+		if len(item.CVE.Metrics.CVSSMetricV40) > 0 {
+			base := item.CVE.Metrics.CVSSMetricV40[0].CVSSData.BaseScore
+			cvss40 = int32(math.Round(base))
+		}
+
+		if len(item.CVE.Metrics.CVSSMetricV31) > 0 {
+			base := item.CVE.Metrics.CVSSMetricV31[0].CVSSData.BaseScore
+			cvss31 = int32(math.Round(base))
+		}
+
+		if len(item.CVE.Metrics.CVSSMetricV2) > 0 {
+			base := item.CVE.Metrics.CVSSMetricV2[0].CVSSData.BaseScore
+			cvss20 = int32(math.Round(base))
+		}
+
+		toPtr := func(v int32) *int32 { return &v }
+
 		dbVuln := db.Vulnerability{
 			CVE:         item.CVE.ID,
 			PublishedAt: item.CVE.Published.Time,
 			Description: enDesc,
+			CVSS40:      toPtr(cvss40),
+			CVSS31:      toPtr(cvss31),
+			CVSS30:      toPtr(cvss30),
+			CVSS20:      toPtr(cvss20),
 			ProductID:   uuid.MustParse(matchedProduct),
 		}
 
