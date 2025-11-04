@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -46,6 +47,65 @@ func CreateVulnerability(ctx context.Context, conn *pgx.Conn, v *Vulnerability) 
 
 	if err != nil {
 		return fmt.Errorf("レコードの挿入に失敗しました: %w", err)
+	}
+
+	return nil
+}
+
+// CreateVulnerabilityBatch は複数の脆弱性を一括で登録します
+func CreateVulnerabilityBatch(ctx context.Context, conn *pgx.Conn, vulns *[]Vulnerability) error {
+	// トランザクションを開始
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("トランザクションの開始に失敗しました: %w", err)
+	}
+	defer tx.Rollback(ctx) // 関数終了時にロールバックを試みる（commitされている場合は無視される）
+
+	// COPY文を使用して一括挿入
+	_, err = tx.CopyFrom(
+		ctx,
+		pgx.Identifier{"Vulnerability"},
+		[]string{
+			"cve",
+			"ghsa",
+			"publishedAt",
+			"description",
+			"cvss40",
+			"cvss31",
+			"cvss30",
+			"cvss20",
+			"productId",
+		},
+		pgx.CopyFromSlice(len(*vulns), func(i int) ([]interface{}, error) {
+			v := (*vulns)[i]
+			return []interface{}{
+				v.CVE,
+				v.GHSA,
+				v.PublishedAt,
+				v.Description,
+				v.CVSS40,
+				v.CVSS31,
+				v.CVSS30,
+				v.CVSS20,
+				v.ProductID,
+			}, nil
+		}),
+	)
+
+	if err != nil {
+		return fmt.Errorf("一括挿入に失敗しました: %w", err)
+	}
+
+	// トランザクションをコミット
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("トランザクションのコミットに失敗しました: %w", err)
+	}
+
+	// 現在の時刻を設定
+	now := time.Now()
+	for i := range *vulns {
+		(*vulns)[i].CreatedAt = now
+		(*vulns)[i].UpdatedAt = now
 	}
 
 	return nil
