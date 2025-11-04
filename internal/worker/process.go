@@ -18,7 +18,6 @@ func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
 		end.Format(time.RFC3339),
 	)
 
-	// nvd パッケージの関数を呼び出します
 	vulnerabilities, err := nvd.FetchVulnerabilities(start, end)
 	if err != nil {
 		fmt.Printf("Error fetching vulnerabilities: %v\n", err)
