@@ -36,7 +36,7 @@ export default function RootLayout({
                         </a>
                     </div>
                 </div>
-                {children}
+                <div className="mt-26 mx-8">{children}</div>
             </body>
         </html>
     );
