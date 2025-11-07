@@ -13,18 +13,12 @@
     "overrideCommand": true,
     "customizations": {
         "vscode": {
-            "extensions": [
-                "EditorConfig.EditorConfig",
-                "biomejs.biome", 
-                "bradlc.vscode-tailwindcss",
-                "golang.go",
-                "nexryai.eclectus-light"
-            ],
+            "extensions": ["EditorConfig.EditorConfig", "biomejs.biome", "bradlc.vscode-tailwindcss", "golang.go", "nexryai.eclectus-light"],
             "settings": {
                 "editor.linkedEditing": true,
                 "editor.formatOnPaste": true,
                 "editor.formatOnSave": true,
-                
+
                 "[go]": {
                     "editor.defaultFormatter": "golang.go"
                 },
