@@ -31,7 +31,12 @@
     "assist": {
         "actions": {
             "source": {
-                "organizeImports": "off"
+                "organizeImports": {
+                    "level": "on",
+                    "options": {
+                        "groups": [["react*", "react/**", "next", "next/**"], ":BLANK_LINE:", ":PACKAGE:", ":BLANK_LINE:", ":ALIAS:", ":PATH:" , ":BLANK_LINE:" ]
+                    }
+                }
             }
         }
     }
