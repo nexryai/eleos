@@ -1,6 +1,6 @@
 import { fetchVulnerability } from "@/actions/nvd";
 
-export default async ({ params }: { params: Promise<{ cve: string }> }) => {
+export default async function({ params }: { params: Promise<{ cve: string }> }) {
     const cveId = (await params).cve;
 
     const data = await fetchVulnerability(cveId);
