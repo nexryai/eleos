@@ -31,8 +31,8 @@ export default function RootLayout({
                         <a href="/">Ablaze Vulnerabilities DB</a>
                     </div>
                     <div className="flex items-center font-mono text-sm">
-                        <a className="flex items-center gap-2 mr-8 hover:underline hover:underline-offset-4" href="/select-road">
-                            報告を提出
+                        <a className="flex items-center gap-2 mr-8 hover:underline hover:underline-offset-4" href="/about">
+                            About
                         </a>
                     </div>
                 </div>
