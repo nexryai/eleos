@@ -1,14 +1,14 @@
-import { test } from "@/actions/cve";
+import { fetchVulnerability } from "@/actions/nvd";
 
 export default async ({ params }: { params: Promise<{ cve: string }> }) => {
     const cveId = (await params).cve;
 
-    const testString = test();
+    const data = await fetchVulnerability(cveId);
 
     return (
         <>
             <h1 className="text-2xl">{cveId}</h1>
-            <p>test {testString}</p>
+            <p className="mt-8">{data.summary}</p>
         </>
     );
 };
