@@ -31,6 +31,27 @@ func NewDBClient(ctx context.Context, uri string, dbName string) (*mongo.Databas
 	return client.Database(dbName), nil
 }
 
+func CreateDatabaseIndex(ctx context.Context, db *mongo.Database) error {
+	log.Print("Starting database index check/creation...")
+
+	vulnCollection := db.Collection("vulnerabilities")
+
+	vulnIndexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "cve", Value: 1}}, // 1 for ascending order
+		Options: options.Index().SetUnique(true),
+	}
+
+	indexName, err := vulnCollection.Indexes().CreateOne(ctx, vulnIndexModel)
+	if err != nil {
+		return fmt.Errorf("failed to create 'cve' index for vulnerabilities: %w", err)
+	}
+
+	log.Printf("Index '%s' (vulnerabilities.cve) ensured.", indexName)
+	
+	log.Print("Index check/creation complete.")
+	return nil
+}
+
 func CreateVulnerability(ctx context.Context, db *mongo.Database, v *Vulnerability) error {
 	log.Print("Starting database session...")
 	if db == nil || db.Client() == nil {
@@ -174,7 +195,7 @@ func CreateVulnerabilityBatch(ctx context.Context, db *mongo.Database, vulns *[]
 			v := &(*vulns)[i]
 
 			if _, exists := existingCVEs[v.CVE]; exists {
-				log.Printf("CVE %s は既に存在するためスキップします。", v.CVE)
+				log.Printf("Skipping CVE %s because it already exists.", v.CVE)
 				continue // 存在する場合はスキップ
 			}
 
@@ -199,7 +220,6 @@ func CreateVulnerabilityBatch(ctx context.Context, db *mongo.Database, vulns *[]
 		}
 
 		if newVulnsFoundCount == 0 {
-			log.Print("新規の脆弱性はありませんでした。")
 			return nil, nil
 		}
 

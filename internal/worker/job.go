@@ -44,6 +44,10 @@ func ExecuteJob() error {
 		return fmt.Errorf("database error: %w", err)
 	}
 
+	if err := db.CreateDatabaseIndex(dbContext, database); err != nil {
+        log.Fatalf("Failed to create database index: %v", err)
+    }
+
 	log.Print("Writing to DB...")
 	err = db.CreateVulnerabilityBatch(dbContext, database, vulnerabilities)
 	if err != nil {
