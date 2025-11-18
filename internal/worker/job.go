@@ -3,16 +3,25 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/nexryai/eleos/internal/db"
 )
 
 var (
-	dbConnectString = os.Getenv("DB_CONNECT_STRING")
+	dbConnectString = os.Getenv("ELEOS_DB_CONNECT_STRING")
 )
 
+func getEnv(key, fallback string) string {
+    if value, ok := os.LookupEnv(key); ok {
+        return value
+    }
+    return fallback
+}
+
 func ExecuteJob() error {
+	log.Print("Fetching vulnerabilities...")
 	nvdVulnerabilities, err := fetchNewVulnerabilities()
 	if err != nil {
 		return fmt.Errorf("error executing job: %w", err)
@@ -23,14 +32,16 @@ func ExecuteJob() error {
 		return nil
 	}
 
+	log.Print("Parsing vulnerabilities...")
 	vulnerabilities, err := processVulnerabilities(nvdVulnerabilities)
 	if err != nil {
 		return fmt.Errorf("error processing vulnerabilities: %w", err)
 	}
 
 	dbContext := context.Background()
-	database, err := db.NewDBConn(dbContext, dbConnectString)
+	database, err := db.NewDBClient(dbContext, dbConnectString, getEnv("ELEOS_DB_NAME", "eleos-dev"))
 
+	log.Print("Writing to DB...")
 	db.CreateVulnerabilityBatch(dbContext, database, vulnerabilities)
 	if err != nil {
 		return fmt.Errorf("error connecting to database: %w", err)
