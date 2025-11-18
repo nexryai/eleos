@@ -31,7 +31,7 @@ func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
 		return nil, nil
 	}
 
-	log.Printf("\nSuccessfully fetched %d total vulnerabilities.\n", len(*vulnerabilities))
+	log.Printf("Successfully fetched %d total vulnerabilities!", len(*vulnerabilities))
 
 	return vulnerabilities, nil
 }
