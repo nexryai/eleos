@@ -5,7 +5,7 @@ import "strings"
 type Windows struct{}
 
 func (w Windows) UUID() string {
-	return "f5b9e6ef-1cd9-4da8-a7f1-7294ee63567b"
+	return "691bdc62086838de18847d3d"
 }
 
 func (w Windows) CheckCPE(cpe string) bool {

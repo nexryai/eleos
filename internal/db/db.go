@@ -7,7 +7,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -119,11 +118,12 @@ func CreateVulnerabilityBatch(ctx context.Context, db *mongo.Database, vulns *[]
 	vulnCollection := db.Collection("vulnerabilities")
 	prodCollection := db.Collection("products")
 
+	log.Print("Executing transactions..")
 	_, err = session.WithTransaction(ctx, func(sessCtx context.Context) (interface{}, error) {
 		now := time.Now()
 		
 		vulnDocs := make([]interface{}, len(*vulns))
-		prodVulnsMap := make(map[uuid.UUID][]EmbeddedVulnerability)
+		prodVulnsMap := make(map[bson.ObjectID][]EmbeddedVulnerability)
 
 		for i := range *vulns {
 			v := &(*vulns)[i]
@@ -178,5 +178,6 @@ func CreateVulnerabilityBatch(ctx context.Context, db *mongo.Database, vulns *[]
 		return fmt.Errorf("脆弱性一括登録トランザクションが失敗しました: %w", err)
 	}
 	
+	log.Print("Transaction succeeded!")
 	return nil
 }

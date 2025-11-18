@@ -6,9 +6,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/nexryai/eleos/internal/db"
 	"github.com/nexryai/eleos/internal/nvd"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
@@ -188,6 +188,10 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
         }
 
         toPtr := func(v int32) *int32 { return &v }
+		productObjectID, err := bson.ObjectIDFromHex(matchedProductUUID)
+		if err != nil {
+            return nil, fmt.Errorf("invalid object id")
+        }
 
         dbVuln := db.Vulnerability{
             CVE:         item.CVE.ID,
@@ -197,7 +201,7 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
             CVSS31:      toPtr(cvss31),
             CVSS30:      toPtr(cvss30),
             CVSS20:      toPtr(cvss20),
-            ProductID:   uuid.MustParse(matchedProductUUID),
+            ProductID:   productObjectID,
         }
 
         dbVulnerabilities = append(dbVulnerabilities, dbVuln)
