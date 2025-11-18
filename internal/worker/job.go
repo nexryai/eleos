@@ -40,11 +40,14 @@ func ExecuteJob() error {
 
 	dbContext := context.Background()
 	database, err := db.NewDBClient(dbContext, dbConnectString, getEnv("ELEOS_DB_NAME", "eleos-dev"))
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
 
 	log.Print("Writing to DB...")
-	db.CreateVulnerabilityBatch(dbContext, database, vulnerabilities)
+	err = db.CreateVulnerabilityBatch(dbContext, database, vulnerabilities)
 	if err != nil {
-		return fmt.Errorf("error connecting to database: %w", err)
+		return fmt.Errorf("a database transaction failed. aborting.: %w", err)
 	}
 
 	return nil
