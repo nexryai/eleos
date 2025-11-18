@@ -19,12 +19,12 @@ func NewDBClient(ctx context.Context, uri string, dbName string) (*mongo.Databas
 	clientOptions := options.Client().ApplyURI(uri)
 	client, err := mongo.Connect(clientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("MongoDBへの接続に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	if err = client.Ping(ctx, nil); err != nil {
 		client.Disconnect(ctx)
-		return nil, fmt.Errorf("MongoDBへのPingに失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to ping the database: %w", err)
 	}
 
 	log.Print("Connected to MongoDB!")
@@ -97,6 +97,10 @@ func CreateVulnerabilityBatch(ctx context.Context, db *mongo.Database, vulns *[]
 	}
 
 	log.Print("Starting database session...")
+	if db == nil || db.Client() == nil {
+		return fmt.Errorf("could not establish database session: client is nil")
+	}
+
 	session, err := db.Client().StartSession()
 	if err != nil {
 		return fmt.Errorf("セッションの開始に失敗しました: %w", err)
