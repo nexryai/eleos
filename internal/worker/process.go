@@ -2,6 +2,7 @@ package worker
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"time"
 
@@ -14,23 +15,23 @@ func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
 	start := time.Date(2025, 9, 25, 15, 45, 0, 0, time.UTC)
 	end := time.Date(2025, 9, 25, 16, 00, 0, 0, time.UTC)
 
-	fmt.Printf("Fetching vulnerabilities modified between %s and %s\n",
+	log.Printf("Fetching vulnerabilities modified between %s and %s\n",
 		start.Format(time.RFC3339),
 		end.Format(time.RFC3339),
 	)
 
 	vulnerabilities, err := nvd.FetchVulnerabilities(start, end)
 	if err != nil {
-		fmt.Printf("Error fetching vulnerabilities: %v\n", err)
+		log.Printf("Error fetching vulnerabilities: %v\n", err)
 		return nil, fmt.Errorf("error fetching vulnerabilities: %w", err)
 	}
 
 	if vulnerabilities == nil || len(*vulnerabilities) == 0 {
-		fmt.Println("No vulnerabilities found in the specified date range.")
+		log.Printf("No vulnerabilities found in the specified date range.")
 		return nil, nil
 	}
 
-	fmt.Printf("\nSuccessfully fetched %d total vulnerabilities.\n", len(*vulnerabilities))
+	log.Printf("\nSuccessfully fetched %d total vulnerabilities.\n", len(*vulnerabilities))
 
 	return vulnerabilities, nil
 }
@@ -116,9 +117,9 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
 		if enDesc != "" {
 			// 説明が長いので、最初の100文字だけ表示
 			if len(enDesc) > 100 {
-				fmt.Printf("  Description (en): %s...\n", enDesc[:100])
+				// fmt.Printf("  Description (en): %s...\n", enDesc[:100])
 			} else {
-				fmt.Printf("  Description (en): %s\n", enDesc)
+				// fmt.Printf("  Description (en): %s\n", enDesc)
 			}
 		} else {
 			fmt.Println("  No English description found.")
