@@ -33,9 +33,16 @@ func NewDBClient(ctx context.Context, uri string, dbName string) (*mongo.Databas
 }
 
 func CreateVulnerability(ctx context.Context, db *mongo.Database, v *Vulnerability) error {
+	log.Print("Starting database session...")
+	if db == nil || db.Client() == nil {
+		return fmt.Errorf("could not establish database session: client is nil")
+	}
+
 	session, err := db.Client().StartSession()
 	if err != nil {
 		return fmt.Errorf("セッションの開始に失敗しました: %w", err)
+	} else {
+		log.Print("Database session established.")
 	}
 	defer session.EndSession(ctx)
 
