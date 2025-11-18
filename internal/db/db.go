@@ -1,112 +1,171 @@
+// db.go
 package db
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func NewDBConn(ctx context.Context, connString string) (*pgx.Conn, error) {
-	conn, err := pgx.Connect(ctx, connString)
+const MaxRecentVulnerabilities = 5
+
+func NewDBClient(ctx context.Context, uri string, dbName string) (*mongo.Database, error) {
+	clientOptions := options.Client().ApplyURI(uri)
+	client, err := mongo.Connect(clientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("DBに接続できませんでした: %w", err)
+		return nil, fmt.Errorf("MongoDBへの接続に失敗しました: %w", err)
 	}
 
-	// Ping
-	if err = conn.Ping(ctx); err != nil {
-		conn.Close(ctx) // 失敗したら接続を閉じる
-		return nil, fmt.Errorf("DBにPingできませんでした: %w", err)
+	if err = client.Ping(ctx, nil); err != nil {
+		client.Disconnect(ctx)
+		return nil, fmt.Errorf("MongoDBへのPingに失敗しました: %w", err)
 	}
 
-	return conn, nil
+	log.Print("Connected to MongoDB!")
+
+	return client.Database(dbName), nil
 }
 
-func CreateVulnerability(ctx context.Context, conn *pgx.Conn, v *Vulnerability) error {
-	query := `
-		INSERT INTO "Vulnerability" (
-			"cve", "ghsa", "publishedAt", "description", 
-			"cvss40", "cvss31", "cvss30", "cvss20", "productId"
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING "createdAt", "updatedAt"
-	`
+func CreateVulnerability(ctx context.Context, db *mongo.Database, v *Vulnerability) error {
+	session, err := db.Client().StartSession()
+	if err != nil {
+		return fmt.Errorf("セッションの開始に失敗しました: %w", err)
+	}
+	defer session.EndSession(ctx)
 
-	err := conn.QueryRow(ctx, query,
-		v.CVE,
-		v.GHSA,
-		v.PublishedAt,
-		v.Description,
-		v.CVSS40,
-		v.CVSS31,
-		v.CVSS30,
-		v.CVSS20,
-		v.ProductID,
-	).Scan(&v.CreatedAt, &v.UpdatedAt)
+	vulnCollection := db.Collection("vulnerabilities")
+	prodCollection := db.Collection("products")
+
+	_, err = session.WithTransaction(ctx, func(sessCtx context.Context) (interface{}, error) {
+		now := time.Now()
+		v.CreatedAt = now
+		v.UpdatedAt = now
+		v.ID = bson.NewObjectID()
+
+		if _, err := vulnCollection.InsertOne(sessCtx, v); err != nil {
+			return nil, fmt.Errorf("vulnerabilities への挿入に失敗しました: %w", err)
+		}
+
+		embeddedVuln := EmbeddedVulnerability{
+			CVE:         v.CVE,
+			GHSA:        v.GHSA,
+			PublishedAt: v.PublishedAt,
+			CVSS40:      v.CVSS40,
+			CVSS31:      v.CVSS31,
+			CVSS30:      v.CVSS30,
+			CVSS20:      v.CVSS20,
+		}
+
+		update := bson.M{
+			"$push": bson.M{
+				"recentVulnerabilities": bson.M{
+					"$each":  []EmbeddedVulnerability{embeddedVuln},
+					"$sort":  bson.M{"publishedAt": -1},
+					"$slice": MaxRecentVulnerabilities,
+				},
+			},
+		}
+		filter := bson.M{"_id": v.ProductID}
+
+		res, err := prodCollection.UpdateOne(sessCtx, filter, update)
+		if err != nil {
+			return nil, fmt.Errorf("products の更新に失敗しました: %w", err)
+		}
+		if res.MatchedCount == 0 {
+			return nil, fmt.Errorf("productId %s に一致する製品が見つかりません", v.ProductID)
+		}
+
+		return nil, nil
+	})
 
 	if err != nil {
-		return fmt.Errorf("レコードの挿入に失敗しました: %w", err)
+		return fmt.Errorf("脆弱性登録トランザクションが失敗しました: %w", err)
 	}
 
 	return nil
 }
 
-// CreateVulnerabilityBatch は複数の脆弱性を一括で登録します
-func CreateVulnerabilityBatch(ctx context.Context, conn *pgx.Conn, vulns *[]Vulnerability) error {
-	// トランザクションを開始
-	tx, err := conn.Begin(ctx)
+func CreateVulnerabilityBatch(ctx context.Context, db *mongo.Database, vulns *[]Vulnerability) error {
+	if len(*vulns) == 0 {
+		return nil
+	}
+
+	log.Print("Starting database session...")
+	session, err := db.Client().StartSession()
 	if err != nil {
-		return fmt.Errorf("トランザクションの開始に失敗しました: %w", err)
+		return fmt.Errorf("セッションの開始に失敗しました: %w", err)
+	} else {
+		log.Print("Database session established.")
 	}
-	defer tx.Rollback(ctx) // 関数終了時にロールバックを試みる（commitされている場合は無視される）
+	defer session.EndSession(ctx)
 
-	// COPY文を使用して一括挿入
-	_, err = tx.CopyFrom(
-		ctx,
-		pgx.Identifier{"Vulnerability"},
-		[]string{
-			"cve",
-			"ghsa",
-			"publishedAt",
-			"description",
-			"cvss40",
-			"cvss31",
-			"cvss30",
-			"cvss20",
-			"productId",
-		},
-		pgx.CopyFromSlice(len(*vulns), func(i int) ([]interface{}, error) {
-			v := (*vulns)[i]
-			return []interface{}{
-				v.CVE,
-				v.GHSA,
-				v.PublishedAt,
-				v.Description,
-				v.CVSS40,
-				v.CVSS31,
-				v.CVSS30,
-				v.CVSS20,
-				v.ProductID,
-			}, nil
-		}),
-	)
+	vulnCollection := db.Collection("vulnerabilities")
+	prodCollection := db.Collection("products")
+
+	_, err = session.WithTransaction(ctx, func(sessCtx context.Context) (interface{}, error) {
+		now := time.Now()
+		
+		vulnDocs := make([]interface{}, len(*vulns))
+		prodVulnsMap := make(map[uuid.UUID][]EmbeddedVulnerability)
+
+		for i := range *vulns {
+			v := &(*vulns)[i]
+			v.CreatedAt = now
+			v.UpdatedAt = now
+			v.ID = bson.NewObjectID()
+			
+			vulnDocs[i] = v
+
+			embeddedVuln := EmbeddedVulnerability{
+				CVE:         v.CVE,
+				GHSA:        v.GHSA,
+				PublishedAt: v.PublishedAt,
+				CVSS40:      v.CVSS40,
+				CVSS31:      v.CVSS31,
+				CVSS30:      v.CVSS30,
+				CVSS20:      v.CVSS20,
+			}
+			prodVulnsMap[v.ProductID] = append(prodVulnsMap[v.ProductID], embeddedVuln)
+		}
+
+		if _, err := vulnCollection.InsertMany(sessCtx, vulnDocs); err != nil {
+			return nil, fmt.Errorf("vulnerabilities への一括挿入に失敗しました: %w", err)
+		}
+
+		var productUpdates []mongo.WriteModel
+		for prodID, newVulns := range prodVulnsMap {
+			filter := bson.M{"_id": prodID}
+			update := bson.M{
+				"$push": bson.M{
+					"recentVulnerabilities": bson.M{
+						"$each":  newVulns,
+						"$sort":  bson.M{"publishedAt": -1},
+						"$slice": MaxRecentVulnerabilities,
+					},
+				},
+			}
+			model := mongo.NewUpdateOneModel().SetFilter(filter).SetUpdate(update)
+			productUpdates = append(productUpdates, model)
+		}
+
+		if len(productUpdates) > 0 {
+			if _, err := prodCollection.BulkWrite(sessCtx, productUpdates); err != nil {
+				return nil, fmt.Errorf("products の一括更新に失敗しました: %w", err)
+			}
+		}
+
+		return nil, nil
+	})
 
 	if err != nil {
-		return fmt.Errorf("一括挿入に失敗しました: %w", err)
+		return fmt.Errorf("脆弱性一括登録トランザクションが失敗しました: %w", err)
 	}
-
-	// トランザクションをコミット
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("トランザクションのコミットに失敗しました: %w", err)
-	}
-
-	// 現在の時刻を設定
-	now := time.Now()
-	for i := range *vulns {
-		(*vulns)[i].CreatedAt = now
-		(*vulns)[i].UpdatedAt = now
-	}
-
+	
 	return nil
 }
