@@ -39,7 +39,7 @@ func ExecuteJob() error {
 	}
 
 	dbContext := context.Background()
-	database, err := db.NewDBClient(dbContext, dbConnectString, getEnv("ELEOS_DB_NAME", "eleos-dev"))
+	database, err := db.NewDBClient(dbContext, dbConnectString, getEnv("DB_NAME", "eleos-dev"))
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
 	}
