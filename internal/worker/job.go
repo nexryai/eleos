@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	dbConnectString = os.Getenv("ELEOS_DB_CONNECT_STRING")
+	dbConnectString = os.Getenv("DB_CONNECT_STRING")
 )
 
 func getEnv(key, fallback string) string {
