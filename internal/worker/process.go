@@ -12,8 +12,9 @@ import (
 )
 
 func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
-	start := time.Date(2025, 9, 25, 15, 45, 0, 0, time.UTC)
-	end := time.Date(2025, 9, 25, 16, 00, 0, 0, time.UTC)
+    // last 30 minutes
+    start := time.Now().Add(-30 * time.Minute)
+    end := time.Now()
 
 	log.Printf("Fetching vulnerabilities modified between %s and %s\n",
 		start.Format(time.RFC3339),
