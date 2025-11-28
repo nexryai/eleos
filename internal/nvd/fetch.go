@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -26,6 +27,8 @@ func fetchVulnerabilitiesRecursive(lastModStartDate, lastModEndDate time.Time, s
 		resultsPerPage,
 		startIndex,
 	)
+
+	log.Printf("Fetching NVD data from URL: %s\n", url)
 
 	resp, err := http.Get(url)
 	if err != nil {
