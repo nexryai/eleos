@@ -2,7 +2,7 @@ module github.com/nexryai/eleos
 
 go 1.24.5
 
-require go.mongodb.org/mongo-driver/v2 v2.4.0
+require go.mongodb.org/mongo-driver/v2 v2.4.1
 
 require (
 	github.com/golang/snappy v1.0.0 // indirect
