@@ -11,6 +11,10 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+func toPtr(v int32) *int32 { 
+    return &v 
+}
+
 func fetchNewVulnerabilities() (*[]nvd.VulnerabilityItem, error) {
     // last 30 minutes
     start := time.Now().Add(-30 * time.Minute)
@@ -187,7 +191,11 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
             cvss20 = int32(math.Round(base))
         }
 
-        toPtr := func(v int32) *int32 { return &v }
+        if (cvss40 == 0 && cvss31 == 0 && cvss30 == 0 && cvss20 == 0) {
+            // どのスコアも0なら未解析の脆弱性なので飛ばす
+            continue
+        }
+
 		productObjectID, err := bson.ObjectIDFromHex(matchedProductUUID)
 		if err != nil {
             return nil, fmt.Errorf("invalid object id")
