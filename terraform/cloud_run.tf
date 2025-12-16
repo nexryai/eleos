@@ -50,4 +50,8 @@ resource "google_cloud_run_v2_job" "default" {
       }
     }
   }
+
+  depends_on = [
+    google_project_iam_member.run_sa_secret_accessor
+  ]
 }
