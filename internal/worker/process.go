@@ -91,7 +91,6 @@ func evaluateNode(product Product, node nvd.Node) bool {
         return false
     }
 
-    // ★バグ修正: node.Operator を使用します (cfg.Operator ではない)
     isAndOperator := node.Operator == "AND"
 
     for _, cpe := range node.CPEMatch {
@@ -145,7 +144,7 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
             continue
         }
 
-        // --- マッチした場合
+        // マッチした場合
         fmt.Printf("\nCVE ID: %s\n", item.CVE.ID)
         fmt.Printf("  Matched Product UUID: %s\n", matchedProductUUID)
 
