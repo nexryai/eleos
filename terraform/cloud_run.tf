@@ -1,5 +1,5 @@
 resource "google_cloud_run_v2_job" "default" {
-  name     = "my-cron-job"
+  name     = "update-db-job"
   location = var.region
 
   template {
@@ -9,7 +9,7 @@ resource "google_cloud_run_v2_job" "default" {
         
         resources {
           limits = {
-            cpu    = "1000m" # 1 vCPU
+            cpu    = "1000m"
             memory = "512Mi"
           }
         }
