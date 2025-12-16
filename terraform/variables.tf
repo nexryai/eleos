@@ -5,7 +5,7 @@ variable "project_id" {
 
 variable "region" {
   description = "GCP Region (e.g., asia-northeast1)"
-  default     = "asia-northeast1"
+  default     = "us-west1"
 }
 
 variable "github_repo" {
