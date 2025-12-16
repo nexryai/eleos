@@ -21,6 +21,11 @@ resource "google_cloud_run_v2_job" "default" {
         }
 
         env {
+          name  = "DB_NAME"
+          value = "eleos"
+        }
+
+        env {
           name = "DB_CONNECT_STRING"
           value_source {
             secret_key_ref {
