@@ -1,4 +1,3 @@
-// db.go
 package db
 
 import (
@@ -12,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-const MaxRecentVulnerabilities = 5
+const MaxRecentVulnerabilities = 7
 
 func NewDBClient(ctx context.Context, uri string, dbName string) (*mongo.Database, error) {
 	clientOptions := options.Client().ApplyURI(uri)
@@ -256,6 +255,6 @@ func CreateVulnerabilityBatch(ctx context.Context, db *mongo.Database, vulns *[]
 		return fmt.Errorf("脆弱性一括登録トランザクションが失敗しました: %w", err)
 	}
 
-	log.Print("Transaction succeeded!") // <--- ログを少し変更
+	log.Print("Transaction succeeded!")
 	return nil
 }
