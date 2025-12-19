@@ -15,15 +15,15 @@ const (
 )
 
 // FetchVulnerabilities は指定された期間のNVDデータを取得します
-func FetchVulnerabilities(lastModStartDate, lastModEndDate time.Time) (*[]VulnerabilityItem, error) {
-	return fetchVulnerabilitiesRecursive(lastModStartDate, lastModEndDate, 0)
+func FetchVulnerabilities(pubStartDate, pubEndDate time.Time) (*[]VulnerabilityItem, error) {
+	return fetchVulnerabilitiesRecursive(pubStartDate, pubEndDate, 0)
 }
 
-func fetchVulnerabilitiesRecursive(lastModStartDate, lastModEndDate time.Time, startIndex int) (*[]VulnerabilityItem, error) {
-	url := fmt.Sprintf("%s?lastModStartDate=%s&lastModEndDate=%s&resultsPerPage=%d&startIndex=%d",
+func fetchVulnerabilitiesRecursive(pubStartDate, pubEndDate time.Time, startIndex int) (*[]VulnerabilityItem, error) {
+	url := fmt.Sprintf("%s?pubStartDate=%s&pubEndDate=%s&resultsPerPage=%d&startIndex=%d",
 		baseURL,
-		lastModStartDate.Format(time.RFC3339),
-		lastModEndDate.Format(time.RFC3339),
+		pubStartDate.Format(time.RFC3339),
+		pubEndDate.Format(time.RFC3339),
 		resultsPerPage,
 		startIndex,
 	)
@@ -51,13 +51,15 @@ func fetchVulnerabilitiesRecursive(lastModStartDate, lastModEndDate time.Time, s
 	// 残りのデータがある場合は再帰的に取得
 	if startIndex+resultsPerPage < apiResp.TotalResults {
 		nextVulnerabilities, err := fetchVulnerabilitiesRecursive(
-			lastModStartDate,
-			lastModEndDate,
+			pubStartDate,
+			pubEndDate,
 			startIndex+resultsPerPage,
 		)
+		
 		if err != nil {
 			return nil, err
 		}
+
 		vulnerabilities = append(vulnerabilities, *nextVulnerabilities...)
 	}
 
