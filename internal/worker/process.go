@@ -178,17 +178,17 @@ func processVulnerabilities(vulnerabilities *[]nvd.VulnerabilityItem) (*[]db.Vul
 
         if len(item.CVE.Metrics.CVSSMetricV40) > 0 {
             base := item.CVE.Metrics.CVSSMetricV40[0].CVSSData.BaseScore
-            cvss40 = int32(math.Round(base))
+            cvss40 = int32(math.Round(base * 10))
         }
 
         if len(item.CVE.Metrics.CVSSMetricV31) > 0 {
             base := item.CVE.Metrics.CVSSMetricV31[0].CVSSData.BaseScore
-            cvss31 = int32(math.Round(base))
+            cvss31 = int32(math.Round(base * 10))
         }
 
         if len(item.CVE.Metrics.CVSSMetricV2) > 0 {
             base := item.CVE.Metrics.CVSSMetricV2[0].CVSSData.BaseScore
-            cvss20 = int32(math.Round(base))
+            cvss20 = int32(math.Round(base * 10))
         }
 
         if (cvss40 == 0 && cvss31 == 0 && cvss30 == 0 && cvss20 == 0) {
