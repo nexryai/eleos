@@ -28,12 +28,14 @@ jobs:
       - name: Install test dependencies
         run: |
           apt-get update
-          apt-get install -y nftables iproute2 netcat-openbsd
+          apt-get install -y nftables iproute2 iputils-ping
           nft --version
           uname -r
 
       - name: Build rcfctl
         run: CGO_ENABLED=0 go build -o rcfctl main.go
 
-      - name: Run nftables integration test
-        run: bash scripts/integration-test.sh
+      - name: Run nftables integration tests
+        env:
+          RCFCTL_BIN: ${{ github.workspace }}/rcfctl
+        run: go test -tags integration -v -count=1 -timeout 10m ./integration/...
