@@ -1,0 +1,39 @@
+name: Nftables Integration Test
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  integration:
+    name: Run against real nftables
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # nftablesの操作にはCAP_NET_ADMINが必要で、さらに検証用のveth/ネットワーク
+    # 名前空間の作成には特権が必要なため--privilegedでコンテナを起動する。
+    # コンテナは自身のネットワーク名前空間を持つので、ランナー(VM)本体の
+    # ネットワークには影響しない。
+    container:
+      image: golang:1.22
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        run: |
+          apt-get update
+          apt-get install -y nftables iproute2 netcat-openbsd
+          nft --version
+          uname -r
+
+      - name: Build rcfctl
+        run: CGO_ENABLED=0 go build -o rcfctl main.go
+
+      - name: Run nftables integration test
+        run: bash scripts/integration-test.sh
