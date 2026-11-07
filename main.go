@@ -24,12 +24,8 @@ func checkConfigFile(path string) {
 
 func writeRulesFromConfig(cfg *config.Config) bool {
 	// ipdefine.conf (IPのリストを定義するやつ)を生成
-	ipDefineRules, err := render.GenIpDefineRules(cfg)
-	if err != nil {
-		log.MsgFatalAndExit(err, "Network Error. Please use offline mode!")
-	} else {
-		system.WriteToFile(ipDefineRules, cfg.Nftables.IpDefineFilePath)
-	}
+	ipDefineRules := render.GenIpDefineRules(cfg)
+	system.WriteToFile(ipDefineRules, cfg.Nftables.IpDefineFilePath)
 
 	// nftablesルールを生成
 	rules := render.GenRulesFromConfig(cfg)
@@ -38,7 +34,7 @@ func writeRulesFromConfig(cfg *config.Config) bool {
 }
 
 func exportRulesFromConfig(cfg *config.Config) bool {
-	ipDefineRules, _ := render.GenIpDefineRules(cfg)
+	ipDefineRules := render.GenIpDefineRules(cfg)
 	for _, item := range ipDefineRules {
 		fmt.Println(item)
 	}
@@ -112,13 +108,6 @@ func main() {
 		// nftコマンドを実行して適用
 		applyNftablesRules(cfg.Nftables.NftablesFilePath)
 		log.MsgInfo("roscaelum firewall is enabled.")
-	} else if operation == "offline" {
-		// Q.これは何
-		// A.オフライン環境だとレンダリングできない（CloudflareのIPなどが取得できない）。起動直後などのオフラインな環境でも最低限の保護を有効にするため、一旦roscaelum.ymlの変更を反映せずとりあえず古いルールをロードだけする。
-
-		// nftコマンドを実行して適用
-		applyNftablesRules(cfg.Nftables.NftablesFilePath)
-		log.MsgInfo("roscaelum firewall is enabled. (Offline mode!)")
 	} else if operation == "export" {
 		// エクスポート
 		log.MsgDebug(fmt.Sprintf("configFilePath: %s", *configFilePath))

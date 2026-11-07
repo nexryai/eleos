@@ -23,18 +23,14 @@ ipset:
 
 security:
   alwaysDenyIP: ["1.1.1.1"]
-  alwaysDenyASN: ["53667", "397702"]
-  alwaysDenyTor: true
 
   disablePortScanProtection: false
   disableIpFragmentsBlock: false
 
 ports:
   - port: 80
-    allowIP: "cloudflare"
 
   - port: 443
-    allowIP: "cloudflare"
 
   - port: 22
     proto: "tcp"

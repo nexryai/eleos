@@ -1,7 +1,6 @@
 package iputil
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -66,48 +65,4 @@ func TestIsIPv6(t *testing.T) {
 	if IsIPv6(ipv4Address) {
 		t.Errorf("Expected %s not to be an IPv6 address, but it is.", ipv4Address)
 	}
-}
-
-// IsReportableAddressのテスト
-func TestIsReportableAddress(t *testing.T) {
-	reportableIP := "8.8.8.8"
-	privateIP := "192.168.1.1"
-	invalidIP := "invalidIP"
-
-	if !IsReportableAddress(reportableIP) {
-		t.Errorf("Expected %s to be reportable, but it is not.", reportableIP)
-	}
-
-	if IsReportableAddress(privateIP) {
-		t.Errorf("Expected %s not to be reportable, but it is.", privateIP)
-	}
-
-	if IsReportableAddress(invalidIP) {
-		t.Errorf("Expected %s not to be reportable, but it is.", invalidIP)
-	}
-}
-
-func TestFetchIpSet(t *testing.T) {
-	cloudflareIPs := FetchIpSet("https://s3.sda1.net/nyan/contents/ebce0a59-6b42-4080-be4c-54e8a2c524b3", false)
-	if len(cloudflareIPs) == 0 {
-		t.Error("Failed to fetch Cloudflare IPs.")
-	}
-
-	if !CheckIPAddresses(cloudflareIPs) {
-		t.Error("Some Cloudflare IPs are invalid.")
-	}
-
-	for _, i := range cloudflareIPs {
-		if strings.Contains(i, "173.245.48.0/20") {
-			break
-		}
-
-		t.Errorf("173.245.48.0/20 not found in cloudflareIPs for test:")
-	}
-
-	fetchedCloudflareIPsNotAllowV6 := FetchIpSet("https://www.cloudflare.com/ips-v6", false)
-	if len(fetchedCloudflareIPsNotAllowV6) != 0 {
-		t.Error("allowIPv6 is false, but IPv6 addresses are fetched.")
-	}
-
 }

@@ -15,7 +15,6 @@ type Config struct {
 	Outgoing  OutgoingConfig `yaml:"outbound"`
 	Router    RouterConfig   `yaml:"router"`
 	Nat       []NatConfig    `yaml:"nat"`
-	Report    ReportConfig   `yaml:"report"`
 	DebugMode bool           `yaml:"debugMode"`
 }
 
@@ -26,7 +25,6 @@ type NftablesConfig struct {
 
 type IpSetConfig struct {
 	Name string   `yaml:"name"`
-	Url  string   `yaml:"url"`
 	Ip   []string `yaml:"ip"`
 }
 
@@ -41,9 +39,6 @@ type DefaultConfig struct {
 
 type SecurityConfig struct {
 	AlwaysDenyIP              []string `yaml:"alwaysDenyIP"`
-	AlwaysDenyASN             []string `yaml:"alwaysDenyASN"`
-	AlwaysDenyAbuseIP         bool     `yaml:"alwaysDenyAbuseIP"`
-	AlwaysDenyTor             bool     `yaml:"alwaysDenyTor"`
 	DisablePortScanProtection bool     `yaml:"disablePortScanProtection"`
 	DisableIpFragmentsBlock   bool     `yaml:"disableIpFragmentsBlock"`
 }
@@ -88,12 +83,6 @@ type NatConfig struct {
 	DstPort   string `yaml:"dstPort"`
 	Proto     string `yaml:"proto"`
 	NatTo     string `yaml:"natTo"`
-}
-
-type ReportConfig struct {
-	AbuseIpDbAPIKey string   `yaml:"abuseIpDbAPIKey"`
-	TrustedIPs      []string `yaml:"trustedIPs"`
-	ReportInterval  int      `yaml:"reportIntervalMinutes"`
 }
 
 func LoadConfig(configFilePath string) Config {

@@ -1,24 +1,12 @@
 package iputil
 
 import (
-	"bufio"
 	"fmt"
-	"roscaelum/internal/log"
 	"net"
-	"net/http"
 	"regexp"
+	"roscaelum/internal/log"
 	"strings"
 )
-
-func isPrivateAddress(address string) bool {
-	// 0.0.0.0は127.0.0.1と扱うOSが多いのでプライベートアドレスとして扱う
-	if address == "0.0.0.0" {
-		return true
-	}
-
-	ip := net.ParseIP(address)
-	return ip != nil && (ip.IsLoopback() || ip.IsPrivate())
-}
 
 // stringが有効なIPアドレスか識別する
 func isValidIP(ip string) bool {
@@ -42,46 +30,6 @@ func CheckIPAddresses(ipAddresses []string) bool {
 
 func IsIPv6(input string) bool {
 	return isValidIP(input) && strings.Contains(input, ":")
-}
-
-// AbuseIPDBに通報可能なIPかどうか
-func IsReportableAddress(ip string) bool {
-	if !isValidIP(ip) {
-		return false
-	} else if isPrivateAddress(ip) {
-		return false
-	} else {
-		return true
-	}
-}
-
-func FetchIpSet(url string, allowIPv6 bool) []string {
-	resp, err := http.Get(url)
-	if err != nil {
-		log.MsgFatalAndExit(err, "failed to fetch ipset.")
-	}
-
-	if resp.StatusCode != 200 {
-		log.MsgFatalAndExit(fmt.Errorf("status code: %d", resp.StatusCode), "failed to fetch ipset.")
-	}
-
-	defer resp.Body.Close()
-
-	scanner := bufio.NewScanner(resp.Body)
-
-	var ips []string
-	for scanner.Scan() {
-		i := scanner.Text()
-		if !isValidIP(i) {
-			log.MsgWarn("Ignore invalid ip")
-		} else if !allowIPv6 && IsIPv6(i) {
-			// ToDo
-		} else {
-			ips = append(ips, i)
-		}
-	}
-
-	return ips
 }
 
 func ExtractIPAddress(input string) (string, error) {

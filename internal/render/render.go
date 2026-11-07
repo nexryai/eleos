@@ -21,53 +21,22 @@ func containsString(arr []string, target string) bool {
 	return false
 }
 
-func shouldDefineCloudflareIPs(config *config.Config) bool {
-	for _, p := range config.Ports {
-		if p.AllowIP == "cloudflare" || p.AllowIP == "cloudflare_v6" {
-			return true
-		}
-	}
-
-	return false
-}
-
-func GenIpDefineRules(config *config.Config) ([]string, error) {
+func GenIpDefineRules(config *config.Config) []string {
 	var rules []string
-
-	// CloudflareのIPを取得し定義する
-	if shouldDefineCloudflareIPs(config) {
-		var clouflareIPsV4 []string
-		var clouflareIPsV6 []string
-
-		clouflareIPsV4 = iputil.FetchIpSet("https://www.cloudflare.com/ips-v4", false)
-
-		if config.Default.EnableIPv6 {
-			clouflareIPsV6 = iputil.FetchIpSet("https://www.cloudflare.com/ips-v6", true)
-		}
-
-		rules = append(rules, MkDefine("CLOUDFLARE", clouflareIPsV4), MkDefine("CLOUDFLARE_V6", clouflareIPsV6))
-	}
 
 	// ユーザー定義のipsetをロードする
 	for _, s := range config.IpSet {
-		var addrs []string
-
-		if s.Url != "" {
-			addrs = append(addrs, iputil.FetchIpSet(s.Url, false)...)
-		}
-
-		addrs = append(addrs, s.Ip...)
-		rules = append(rules, MkDefine(s.Name, addrs))
+		rules = append(rules, MkDefine(s.Name, s.Ip))
 	}
 
-	return rules, nil
+	return rules
 }
 
 func GenRulesFromConfig(cfg *config.Config) []string {
 	var rules []string
 
 	// IpDefineFilePathをincludeする
-	// IpDefineFilePathにはCloudflareのIPやAubseIPがキャッシュされている
+	// IpDefineFilePathにはユーザー定義のipsetが格納されている
 	rules = append(rules, MkInclude(cfg.Nftables.IpDefineFilePath))
 
 	//テーブル作成
@@ -99,24 +68,8 @@ func GenRulesFromConfig(cfg *config.Config) []string {
 		rules = append(rules, MkBlockIPFragments())
 	}
 
-	// AlwaysDenyIPとAlwaysDenyASNのCIDRを格納する
-	alwaysDenyIP := cfg.Security.AlwaysDenyIP
-
-	// alwaysDenyASNをIPのCIDRに変換
-	for _, denyASN := range cfg.Security.AlwaysDenyASN {
-		alwaysDenyIP = append(alwaysDenyIP, iputil.GetIpRangeFromASN(denyASN)...)
-	}
-
-	// AlwaysDenyTorならTorのIPを拒否
-	// Torの出口のIPは頻繁に変動するため、将来的にキャッシュの対象となるGenIpDefineRulesで生成せずここで毎回取得する
-	if cfg.Security.AlwaysDenyTor {
-		for _, denyIP := range iputil.FetchIpSet("https://check.torproject.org/torbulkexitlist?ip=1.1.1.1", false) {
-			alwaysDenyIP = append(alwaysDenyIP, denyIP)
-		}
-	}
-
 	// alwaysDenyIPを拒否
-	for _, denyIP := range alwaysDenyIP {
+	for _, denyIP := range cfg.Security.AlwaysDenyIP {
 		rules = append(rules, MkDenyIP(denyIP))
 	}
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"roscaelum/internal/config"
 	"roscaelum/internal/iputil"
-	"roscaelum/internal/log"
 	"roscaelum/internal/model"
 	"strings"
 )
@@ -87,23 +86,6 @@ func MkDenyIP(denyIp string) string {
 
 func MkAllowPort(c *config.PortConfig) string {
 	rule := "\t\t"
-	var allowIP string
-
-	if c.AllowIP == "cloudflare" {
-		allowIP = "$CLOUDFLARE"
-	} else if c.AllowIP == "cloudflare_v6" {
-		allowIP = "$CLOUDFLARE_V6"
-	} else {
-		allowIP = c.AllowIP
-	}
-
-	var ipVersion int8
-
-	if allowIP == "$CLOUDFLARE_V6" || iputil.IsIPv6(allowIP) {
-		ipVersion = 6
-	} else {
-		ipVersion = 4
-	}
 
 	if c.AllowInterface != "" {
 		rule += fmt.Sprintf("iifname \"%s\" ", c.AllowInterface)
@@ -111,17 +93,15 @@ func MkAllowPort(c *config.PortConfig) string {
 
 	rule += fmt.Sprintf("%s dport %d ", c.Proto, c.Port)
 
-	if allowIP != "" {
-		if ipVersion == 4 {
-			rule += fmt.Sprintf("ip saddr %s ", allowIP)
-		} else if ipVersion == 6 {
-			rule += fmt.Sprintf("ip6 saddr %s ", allowIP)
+	if c.AllowIP != "" {
+		if iputil.IsIPv6(c.AllowIP) {
+			rule += fmt.Sprintf("ip6 saddr %s ", c.AllowIP)
 		} else {
-			log.GenBugCodeMessage("fea1507a-6eb7-40d4-a499-1f70ac6fd580")
+			rule += fmt.Sprintf("ip saddr %s ", c.AllowIP)
 		}
 	}
 
-	rule += fmt.Sprintf("accept")
+	rule += "accept"
 
 	return rule
 }
