@@ -1,56 +1,62 @@
 ## roscaelum Firewall
 
-### これは何
-nftablesをnetlink経由で直接操作する、軽量でシンプルかつセキュアでエッセンシャルなファイアウォール。  
-開発中です。
+### What is this?
+A lightweight, simple, secure and essential firewall that operates nftables
+directly via netlink.
+Under development.
 
+### Design principles
 
-### 設計原則
+#### Simple and easy to use
+All configuration is managed in YAML. No more hammering `ufw status`!
+It also runs as a single binary and does not depend on the `nft` command,
+so installation is easy.
 
-#### シンプルで使いやすい
-設定は全てyamlで管理します。もう`ufw status`を連打する必要はありません！  
-さらにシングルバイナリで動作し、`nft`コマンドにも依存しないためインストールも簡単です。
+#### Secure
+It warns about unsafe settings. It is written in memory-safe Go.
 
-#### セキュア
-不適切な設定には警告を表示します。またメモリセーフなGoで書かれています。
+#### Plenty of useful features
+It includes features that help make your server more secure, such as
+allowing access only on specific interfaces and denying access from
+arbitrary IP addresses.
+Want to build your own router? roscaelum includes features to help you
+set up a simple home router!
 
-#### 数々の便利機能
-特定のインターフェースでのみアクセスを許可したり、任意のIPからのアクセスを禁止するなど、よりサーバーをセキュアにするのに役立つ機能が搭載されています。  
-ルーターを自作したいですか？ roscaelumには簡易的なホームルーターの構築を支援する機能が搭載されています！  
+#### Fully offline operation
+No external API communication is required, so rules can be generated and
+applied entirely offline.
 
-#### 完全オフライン動作
-外部APIへの通信を必要としないため、ルールの生成・適用は全てオフラインで行えます。
+### Usage
+Note: disable any existing firewall before using this.
 
+#### Install from source
+```sh
+# Build
+CGO_ENABLED=0 go build -o rcfctl main.go
 
-### 使い方
-注意: 使う前に既存のファイアウォールを無効化してください
+# Install (run as root)
+install -m 0755 rcfctl /usr/bin/rcfctl
+install -m 0644 systemd/roscaelum.service /etc/systemd/system/
+install -m 0644 config.default.yml /etc/roscaelum.yml
+systemctl daemon-reload
 
+# Edit the rules
+nano /etc/roscaelum.yml
+
+# Apply
+rcfctl enable
+
+# Apply automatically on boot
+systemctl enable roscaelum
 ```
-wget https://raw.githubusercontent.com/nexryai/roscaelum/main/install.sh
-sudo bash install.sh
 
-# ルールを編集
-sudo nano /etc/roscaelum.yml
+After editing the configuration, re-apply it with `rcfctl apply`.
 
-# 適用
-sudo rcfctl enable
+### Known issues
 
-# 起動時に適用されるようにする
-sudo systemctl enable roscaelum
-```
-#### ソースからビルド
-```
-# ビルド
-make
+#### On RHEL-based systems, systemd may complain about permissions
+This is caused by SELinux.
+`sudo restorecon -R /usr/bin/rcfctl` fixes it.
 
-# インストール
-sudo make install
-```
-
-### 既知の問題
-#### RHEL系に入れたらsystemd経由で扱おうとするとPermissionで文句言われる
-SELinuxのせいです。  
-`sudo restorecon -R /usr/bin/rcfctl`で解決します。
-
-#### Dockerと競合する
-`allowAllFwd`をtrueにすれば回避できます。
+#### Conflicts with Docker
+Set `allowAllFwd` to `true` to work around it.
