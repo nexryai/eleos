@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"roscaelum/internal/config"
 	"roscaelum/internal/log"
 	"roscaelum/internal/render"
 	"roscaelum/internal/system"
-	"os"
 )
 
 func applyNftablesRules(configFilePath string) {

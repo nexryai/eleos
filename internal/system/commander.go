@@ -3,8 +3,8 @@ package system
 import (
 	"bytes"
 	"fmt"
-	"roscaelum/internal/log"
 	"os/exec"
+	"roscaelum/internal/log"
 	"strings"
 )
 

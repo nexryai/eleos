@@ -2,8 +2,8 @@ package config
 
 import (
 	"gopkg.in/yaml.v2"
-	"roscaelum/internal/log"
 	"os"
+	"roscaelum/internal/log"
 )
 
 type Config struct {

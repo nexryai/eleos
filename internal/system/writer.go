@@ -1,8 +1,8 @@
 package system
 
 import (
-	"roscaelum/internal/log"
 	"os"
+	"roscaelum/internal/log"
 	"strings"
 )
 
