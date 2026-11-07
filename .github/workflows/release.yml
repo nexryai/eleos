@@ -5,9 +5,11 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
-    permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,124 +31,17 @@ jobs:
           GOOS=linux GOARCH=ppc64le CGO_ENABLED=0 go build -o rcfctl-ppc64le main.go
           GOOS=linux GOARCH=s390x CGO_ENABLED=0 go build -o rcfctl-s390x main.go
 
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
       - name: Compress with zip
         run: |
-          zip release-amd64 rcfctl-amd64
-          zip release-arm rcfctl-arm
-          zip release-arm64 rcfctl-arm64
-          zip release-mips rcfctl-mips
-          zip release-mips64 rcfctl-mips64
-          zip release-riscv64 rcfctl-riscv64
-          zip release-ppc64 rcfctl-ppc64
-          zip release-ppc64le rcfctl-ppc64le
-          zip release-s390x rcfctl-s390x
+          for arch in amd64 arm arm64 mips mips64 riscv64 ppc64 ppc64le s390x; do
+            zip -j "roscaelum-linux-$arch.zip" "rcfctl-$arch"
+          done
 
-      - name: Upload Release Asset (amd64)
-        id: upload-release-asset-amd64
-        uses: actions/upload-release-asset@v1.0.1
+      - name: Create release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-amd64.zip
-          asset_name: roscaelum-linux-amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (arm)
-        id: upload-release-asset-arm
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-arm.zip
-          asset_name: roscaelum-linux-arm.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (arm64)
-        id: upload-release-asset-arm64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-arm64.zip
-          asset_name: roscaelum-linux-arm64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (mips)
-        id: upload-release-asset-mips
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-mips.zip
-          asset_name: roscaelum-linux-mips.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (mips64)
-        id: upload-release-asset-mips64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-mips64.zip
-          asset_name: roscaelum-linux-mips64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (riscv64)
-        id: upload-release-asset-riscv64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-riscv64.zip
-          asset_name: roscaelum-linux-riscv64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (ppc64)
-        id: upload-release-asset-ppc64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-ppc64.zip
-          asset_name: roscaelum-linux-ppc64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (ppc64le)
-        id: upload-release-asset-ppc64le
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-ppc64le.zip
-          asset_name: roscaelum-linux-ppc64le.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset (s390x)
-        id: upload-release-asset-s390x
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-s390x.zip
-          asset_name: roscaelum-linux-s390x.zip
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "roscaelum $GITHUB_REF_NAME" \
+            --generate-notes \
+            roscaelum-linux-*.zip
