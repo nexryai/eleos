@@ -60,16 +60,16 @@ func MkAllowPing() string {
 	rateLimitPerSec := 4
 
 	// ip protocol icmp icmp type echo-request limit rate 4/second accept
-	// ip protocol icmp icmp type echo-request log prefix "[LanceLight] icmp echo-request rate limit exceeded: " counter drop
-	return fmt.Sprintf("\t\tip protocol icmp icmp type echo-request limit rate %d/second accept; ip protocol icmp icmp type echo-request log prefix \"[LanceLight] icmp echo-request rate limit exceeded: \" counter drop;", rateLimitPerSec)
+	// ip protocol icmp icmp type echo-request log prefix "[roscaelum] icmp echo-request rate limit exceeded: " counter drop
+	return fmt.Sprintf("\t\tip protocol icmp icmp type echo-request limit rate %d/second accept; ip protocol icmp icmp type echo-request log prefix \"[roscaelum] icmp echo-request rate limit exceeded: \" counter drop;", rateLimitPerSec)
 }
 
 func MkAllowPingICMPv6() string {
 	rateLimitPerSec := 4
 
 	// ip6 nexthdr icmpv6 icmpv6 type echo-request limit rate 4/second accept
-	// ip6 nexthdr icmpv6 icmpv6 type echo-request log prefix "[LanceLight] icmpv6 echo-request rate limit exceeded: " counter drop
-	return fmt.Sprintf("\t\tip6 nexthdr icmpv6 icmpv6 type echo-request limit rate %d/second accept; ip6 nexthdr icmpv6 icmpv6 type echo-request log prefix \"[LanceLight] icmpv6 echo-request rate limit exceeded: \" counter drop;", rateLimitPerSec)
+	// ip6 nexthdr icmpv6 icmpv6 type echo-request log prefix "[roscaelum] icmpv6 echo-request rate limit exceeded: " counter drop
+	return fmt.Sprintf("\t\tip6 nexthdr icmpv6 icmpv6 type echo-request limit rate %d/second accept; ip6 nexthdr icmpv6 icmpv6 type echo-request log prefix \"[roscaelum] icmpv6 echo-request rate limit exceeded: \" counter drop;", rateLimitPerSec)
 }
 
 func MkAllowIPv6Ad() string {
@@ -159,7 +159,7 @@ func MkAllowNonSynOutgoing() string {
 }
 
 func MkLoggingForOutgoing() string {
-	return "\t\tlog prefix \"[LanceLight] Not allowed syn-packet was dropped: \" counter drop"
+	return "\t\tlog prefix \"[roscaelum] Not allowed syn-packet was dropped: \" counter drop"
 }
 
 // ルーター用ルール
@@ -218,29 +218,29 @@ func MkSnatForDnat(c *model.SnatForDnat) string {
 
 // ログ関係
 func MkLoggingRules(policy string) string {
-	return fmt.Sprintf("\t\tlog prefix \"[LanceLight] Access Denied: \" counter %s", policy)
+	return fmt.Sprintf("\t\tlog prefix \"[roscaelum] Access Denied: \" counter %s", policy)
 }
 
 func MkDropInvalid() string {
-	// ct state { invalid } log prefix "[LanceLight] Drop invalid packet: " drop
-	// tcp flags & (fin|syn|rst|ack) != syn ct state { new } log prefix "[LanceLight] Drop invalid packet: " drop
-	return "\t\tct state { invalid } log prefix \"[LanceLight] Drop invalid packet: \" drop; tcp flags & (fin|syn|rst|ack) != syn ct state { new } log prefix \"[LanceLight] Drop invalid packet: \" drop;"
+	// ct state { invalid } log prefix "[roscaelum] Drop invalid packet: " drop
+	// tcp flags & (fin|syn|rst|ack) != syn ct state { new } log prefix "[roscaelum] Drop invalid packet: " drop
+	return "\t\tct state { invalid } log prefix \"[roscaelum] Drop invalid packet: \" drop; tcp flags & (fin|syn|rst|ack) != syn ct state { new } log prefix \"[roscaelum] Drop invalid packet: \" drop;"
 }
 
 func MkBlockIPFragments() string {
-	return "\t\tip frag-off & 0x1fff != 0 log prefix \"[LanceLight] IP FRAGMENTS detected and blocked: \" counter drop"
+	return "\t\tip frag-off & 0x1fff != 0 log prefix \"[roscaelum] IP FRAGMENTS detected and blocked: \" counter drop"
 }
 
 func MkBlockTcpXmas() string {
-	return "\t\ttcp flags & (fin|psh|urg) == fin|psh|urg log prefix \"[LanceLight] TCP XMAS blocked: \" counter drop"
+	return "\t\ttcp flags & (fin|psh|urg) == fin|psh|urg log prefix \"[roscaelum] TCP XMAS blocked: \" counter drop"
 }
 
 func MkBlockTcpNull() string {
-	return "\t\ttcp flags & (fin|syn|rst|psh|ack|urg) == 0x0 log prefix \"[LanceLight] TCP NULL blocked: \" counter drop"
+	return "\t\ttcp flags & (fin|syn|rst|psh|ack|urg) == 0x0 log prefix \"[roscaelum] TCP NULL blocked: \" counter drop"
 }
 
 func MkBlockTcpMss() string {
-	return "\t\ttcp flags syn tcp option maxseg size 1-535 log prefix \"[LanceLight] TCP MSS blocked: \" counter drop"
+	return "\t\ttcp flags syn tcp option maxseg size 1-535 log prefix \"[roscaelum] TCP MSS blocked: \" counter drop"
 }
 
 func MkJumpToSynFloodLimiter() string {
@@ -248,7 +248,7 @@ func MkJumpToSynFloodLimiter() string {
 }
 
 func MkRateLimit(rate uint, burst uint, name string) string {
-	return fmt.Sprintf("\t\tlimit rate %d/second burst %d packets counter return; log prefix \"[LanceLight] %s attack mitigated: \" counter drop;", rate, burst, name)
+	return fmt.Sprintf("\t\tlimit rate %d/second burst %d packets counter return; log prefix \"[roscaelum] %s attack mitigated: \" counter drop;", rate, burst, name)
 }
 
 // チェーンとテーブル関係

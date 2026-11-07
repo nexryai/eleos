@@ -16,7 +16,7 @@ var gray = "\033[37m"
 
 // 現状だとデバッグモードはロギングにのみ影響するので公開していないが将来的にIsDebugModeになる可能性もある？
 func isDebugMode() bool {
-	return os.Getenv("LANCE_DEBUG_MODE") == "true"
+	return os.Getenv("ROSCAELUM_DEBUG_MODE") == "true"
 }
 
 func MsgInfo(text string) {

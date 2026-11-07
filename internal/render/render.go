@@ -71,7 +71,7 @@ func GenRulesFromConfig(cfg *config.Config) []string {
 	rules = append(rules, MkInclude(cfg.Nftables.IpDefineFilePath))
 
 	//テーブル作成
-	rules = append(rules, MkTableStart("lance"))
+	rules = append(rules, MkTableStart("roscaelum"))
 
 	if cfg.Default.AllowAllIn {
 		log.MsgWarn("Input is allowed by default. This is a VERY UNSAFE setting. You MUST not use this setting unless you know what you are doing.")

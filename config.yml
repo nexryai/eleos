@@ -1,6 +1,6 @@
 # これを通常触る必要はないかも
 nftables:
-  configFilePath: "./nftables.lance.conf"
+  configFilePath: "./nftables.roscaelum.conf"
   ipDefineFilePath: "./nftables.ipdefine.conf"
 
 default:

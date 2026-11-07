@@ -19,15 +19,15 @@ jobs:
 
       - name: Build
         run: |
-          GOOS=linux GOARCH=amd64 go build -o llfctl-amd64 main.go
-          GOOS=linux GOARCH=arm go build -o llfctl-arm main.go
-          GOOS=linux GOARCH=arm64 go build -o llfctl-arm64 main.go
-          GOOS=linux GOARCH=mips go build -o llfctl-mips main.go
-          GOOS=linux GOARCH=mips64 go build -o llfctl-mips64 main.go
-          GOOS=linux GOARCH=riscv64 go build -o llfctl-riscv64 main.go
-          GOOS=linux GOARCH=ppc64 go build -o llfctl-ppc64 main.go
-          GOOS=linux GOARCH=ppc64le go build -o llfctl-ppc64le main.go
-          GOOS=linux GOARCH=s390x go build -o llfctl-s390x main.go
+          GOOS=linux GOARCH=amd64 go build -o rcfctl-amd64 main.go
+          GOOS=linux GOARCH=arm go build -o rcfctl-arm main.go
+          GOOS=linux GOARCH=arm64 go build -o rcfctl-arm64 main.go
+          GOOS=linux GOARCH=mips go build -o rcfctl-mips main.go
+          GOOS=linux GOARCH=mips64 go build -o rcfctl-mips64 main.go
+          GOOS=linux GOARCH=riscv64 go build -o rcfctl-riscv64 main.go
+          GOOS=linux GOARCH=ppc64 go build -o rcfctl-ppc64 main.go
+          GOOS=linux GOARCH=ppc64le go build -o rcfctl-ppc64le main.go
+          GOOS=linux GOARCH=s390x go build -o rcfctl-s390x main.go
 
       - name: Create release
         id: create_release
@@ -42,15 +42,15 @@ jobs:
 
       - name: Compress with zip
         run: |
-          zip release-amd64 llfctl-amd64
-          zip release-arm llfctl-arm
-          zip release-arm64 llfctl-arm64
-          zip release-mips llfctl-mips
-          zip release-mips64 llfctl-mips64
-          zip release-riscv64 llfctl-riscv64
-          zip release-ppc64 llfctl-ppc64
-          zip release-ppc64le llfctl-ppc64le
-          zip release-s390x llfctl-s390x
+          zip release-amd64 rcfctl-amd64
+          zip release-arm rcfctl-arm
+          zip release-arm64 rcfctl-arm64
+          zip release-mips rcfctl-mips
+          zip release-mips64 rcfctl-mips64
+          zip release-riscv64 rcfctl-riscv64
+          zip release-ppc64 rcfctl-ppc64
+          zip release-ppc64le rcfctl-ppc64le
+          zip release-s390x rcfctl-s390x
 
       - name: Upload Release Asset (amd64)
         id: upload-release-asset-amd64
@@ -60,7 +60,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-amd64.zip
-          asset_name: LanceLight-linux-amd64.zip
+          asset_name: roscaelum-linux-amd64.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (arm)
@@ -71,7 +71,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-arm.zip
-          asset_name: LanceLight-linux-arm.zip
+          asset_name: roscaelum-linux-arm.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (arm64)
@@ -82,7 +82,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-arm64.zip
-          asset_name: LanceLight-linux-arm64.zip
+          asset_name: roscaelum-linux-arm64.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (mips)
@@ -93,7 +93,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-mips.zip
-          asset_name: LanceLight-linux-mips.zip
+          asset_name: roscaelum-linux-mips.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (mips64)
@@ -104,7 +104,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-mips64.zip
-          asset_name: LanceLight-linux-mips64.zip
+          asset_name: roscaelum-linux-mips64.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (riscv64)
@@ -115,7 +115,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-riscv64.zip
-          asset_name: LanceLight-linux-riscv64.zip
+          asset_name: roscaelum-linux-riscv64.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (ppc64)
@@ -126,7 +126,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-ppc64.zip
-          asset_name: LanceLight-linux-ppc64.zip
+          asset_name: roscaelum-linux-ppc64.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (ppc64le)
@@ -137,7 +137,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-ppc64le.zip
-          asset_name: LanceLight-linux-ppc64le.zip
+          asset_name: roscaelum-linux-ppc64le.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset (s390x)
@@ -148,5 +148,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-s390x.zip
-          asset_name: LanceLight-linux-s390x.zip
+          asset_name: roscaelum-linux-s390x.zip
           asset_content_type: application/zip

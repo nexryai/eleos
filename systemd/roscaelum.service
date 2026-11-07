@@ -1,5 +1,5 @@
 [Unit]
-Description=LanceLight firewall
+Description=roscaelum firewall
 Wants=network-pre.target
 Before=network-pre.target
 
@@ -7,9 +7,9 @@ Before=network-pre.target
 Type=oneshot
 ProtectSystem=true
 ProtectHome=true
-ExecStart=/usr/bin/llfctl offline
-ExecReload=/usr/bin/llfctl apply
-ExecStop=/usr/bin/llfctl disable
+ExecStart=/usr/bin/rcfctl offline
+ExecReload=/usr/bin/rcfctl apply
+ExecStop=/usr/bin/rcfctl disable
 RemainAfterExit=yes
 
 [Install]

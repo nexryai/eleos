@@ -34,25 +34,25 @@ case $ARCHITECTURE in
         ;;
 esac
 
-ZIPNAME="LanceLight-linux-$ARCH.zip"
-FILENAME="llfctl-$ARCH"
+ZIPNAME="roscaelum-linux-$ARCH.zip"
+FILENAME="rcfctl-$ARCH"
 
-wget "https://github.com/nexryai/lance-light/releases/latest/download/$ZIPNAME"
+wget "https://github.com/nexryai/roscaelum/releases/latest/download/$ZIPNAME"
 unzip $ZIPNAME
 rm $ZIPNAME
-mv $FILENAME /usr/bin/llfctl
+mv $FILENAME /usr/bin/rcfctl
 
-curl https://raw.githubusercontent.com/nexryai/lance-light/main/systemd/lance.service > /etc/systemd/system/lance.service
+curl https://raw.githubusercontent.com/nexryai/roscaelum/main/systemd/roscaelum.service > /etc/systemd/system/roscaelum.service
 
-if [ ! -f /etc/lance.yml ]; then
-  curl https://raw.githubusercontent.com/nexryai/lance-light/main/config.default.yml > /etc/lance.yml
+if [ ! -f /etc/roscaelum.yml ]; then
+  curl https://raw.githubusercontent.com/nexryai/roscaelum/main/config.default.yml > /etc/roscaelum.yml
 fi
 
 # restoreconがあるならSELinuxに怒られないようにする
 if command -v restorecon >/dev/null 2>&1; then
-    restorecon -R /usr/bin/llfctl
+    restorecon -R /usr/bin/rcfctl
 fi
 
 systemctl daemon-reload
 
-echo "Lance Light has been installed successfully. enjoy! :)"
+echo "roscaelum has been installed successfully. enjoy! :)"

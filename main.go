@@ -15,7 +15,7 @@ func applyNftablesRules(configFilePath string) {
 }
 
 func flushNftablesRules() {
-	system.ExecCommand("nft", []string{"flush", "table", "inet", "lance"})
+	system.ExecCommand("nft", []string{"flush", "table", "inet", "roscaelum"})
 }
 
 func checkConfigFile(path string) {
@@ -51,18 +51,18 @@ func exportRulesFromConfig(cfg *config.Config) bool {
 }
 
 func showHelp() {
-	fmt.Println("LanceLight firewall - Yet another human-friendly firewall \n\n",
-		"(c)2023 nexryai\nThis program is licensed under the Mozilla Public License Version 2.0, and anyone can audit and contribute to it.\n\n\n",
+	fmt.Println("roscaelum firewall - Yet another human-friendly firewall \n\n",
+		"(c)2023 nexryai\nThis program is licensed under the MIT License, and anyone can audit and contribute to it.\n\n\n",
 		"[usage]\n",
-		"Enable firewall:\n  ▶ llfctl enable\n\n",
-		"Apply rules when configuration is updated:\n  ▶ llfctl apply\n\n",
-		"Disable firewall:\n  ▶ llfctl disable\n\n",
+		"Enable firewall:\n  ▶ rcfctl enable\n\n",
+		"Apply rules when configuration is updated:\n  ▶ rcfctl apply\n\n",
+		"Disable firewall:\n  ▶ rcfctl disable\n\n",
 		"[options]\n",
-		"-f [PATH]: Specify the path to the configuration file (Default: /etc/lance.yml)")
+		"-f [PATH]: Specify the path to the configuration file (Default: /etc/roscaelum.yml)")
 }
 
 func main() {
-	configFilePath := flag.String("f", "/etc/lance.yml", "Path of cfg.yml")
+	configFilePath := flag.String("f", "/etc/roscaelum.yml", "Path of cfg.yml")
 	debugMode := flag.Bool("debug", false, "Enable debug mode")
 
 	flag.Parse()
@@ -71,12 +71,12 @@ func main() {
 	// 環境変数以外にもいいやり方あるかもしれない。毎回configをcore.MsgDbg呼ぶ時に引数渡すのは面倒だから避けたい。
 	if *debugMode {
 		log.MsgInfo("debug mode!")
-		err := os.Setenv("LANCE_DEBUG_MODE", "true")
+		err := os.Setenv("ROSCAELUM_DEBUG_MODE", "true")
 		if err != nil {
 			log.MsgFatalAndExit(err, "Failed to set environment variable.")
 		}
 	} else {
-		err := os.Setenv("LANCE_DEBUG_MODE", "false")
+		err := os.Setenv("ROSCAELUM_DEBUG_MODE", "false")
 		if err != nil {
 			log.MsgFatalAndExit(err, "Failed to set environment variable.")
 		}
@@ -87,7 +87,7 @@ func main() {
 	cfg := config.LoadConfig(*configFilePath)
 
 	if cfg.Nftables.NftablesFilePath == "" {
-		cfg.Nftables.NftablesFilePath = "/etc/nftables.lance.conf"
+		cfg.Nftables.NftablesFilePath = "/etc/nftables.roscaelum.conf"
 	}
 
 	if cfg.Nftables.IpDefineFilePath == "" {
@@ -111,14 +111,14 @@ func main() {
 
 		// nftコマンドを実行して適用
 		applyNftablesRules(cfg.Nftables.NftablesFilePath)
-		log.MsgInfo("LanceLight firewall is enabled.")
+		log.MsgInfo("roscaelum firewall is enabled.")
 	} else if operation == "offline" {
 		// Q.これは何
-		// A.オフライン環境だとレンダリングできない（CloudflareのIPなどが取得できない）。起動直後などのオフラインな環境でも最低限の保護を有効にするため、一旦lance.ymlの変更を反映せずとりあえず古いルールをロードだけする。
+		// A.オフライン環境だとレンダリングできない（CloudflareのIPなどが取得できない）。起動直後などのオフラインな環境でも最低限の保護を有効にするため、一旦roscaelum.ymlの変更を反映せずとりあえず古いルールをロードだけする。
 
 		// nftコマンドを実行して適用
 		applyNftablesRules(cfg.Nftables.NftablesFilePath)
-		log.MsgInfo("LanceLight firewall is enabled. (Offline mode!)")
+		log.MsgInfo("roscaelum firewall is enabled. (Offline mode!)")
 	} else if operation == "export" {
 		// エクスポート
 		log.MsgDebug(fmt.Sprintf("configFilePath: %s", *configFilePath))
@@ -126,7 +126,7 @@ func main() {
 	} else if operation == "disable" {
 		// 設定をアンロードする
 		flushNftablesRules()
-		log.MsgInfo("LanceLight firewall is disabled.")
+		log.MsgInfo("roscaelum firewall is disabled.")
 	} else if operation == "" {
 		//コマンド説明
 		showHelp()
