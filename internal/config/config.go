@@ -7,7 +7,6 @@ import (
 )
 
 type Config struct {
-	Nftables  NftablesConfig `yaml:"nftables"`
 	Default   DefaultConfig  `yaml:"default"`
 	IpSet     []IpSetConfig  `yaml:"ipset"`
 	Security  SecurityConfig `yaml:"security"`
@@ -16,11 +15,6 @@ type Config struct {
 	Router    RouterConfig   `yaml:"router"`
 	Nat       []NatConfig    `yaml:"nat"`
 	DebugMode bool           `yaml:"debugMode"`
-}
-
-type NftablesConfig struct {
-	NftablesFilePath string `yaml:"configFilePath"`
-	IpDefineFilePath string `yaml:"ipDefineFilePath"`
 }
 
 type IpSetConfig struct {

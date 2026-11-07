@@ -5,35 +5,12 @@ import (
 	"fmt"
 	"os"
 	"roscaelum/internal/config"
+	"roscaelum/internal/firewall"
 	"roscaelum/internal/log"
 	"roscaelum/internal/render"
-	"roscaelum/internal/system"
 )
 
-func applyNftablesRules(configFilePath string) {
-	system.ExecCommand("nft", []string{"-f", configFilePath})
-}
-
-func flushNftablesRules() {
-	system.ExecCommand("nft", []string{"flush", "table", "inet", "roscaelum"})
-}
-
-func checkConfigFile(path string) {
-	system.ExecCommand("nft", []string{"--check", "-f", path})
-}
-
-func writeRulesFromConfig(cfg *config.Config) bool {
-	// ipdefine.conf (IPのリストを定義するやつ)を生成
-	ipDefineRules := render.GenIpDefineRules(cfg)
-	system.WriteToFile(ipDefineRules, cfg.Nftables.IpDefineFilePath)
-
-	// nftablesルールを生成
-	rules := render.GenRulesFromConfig(cfg)
-	system.WriteToFile(rules, cfg.Nftables.NftablesFilePath)
-	return true
-}
-
-func exportRulesFromConfig(cfg *config.Config) bool {
+func exportRulesFromConfig(cfg *config.Config) {
 	ipDefineRules := render.GenIpDefineRules(cfg)
 	for _, item := range ipDefineRules {
 		fmt.Println(item)
@@ -43,7 +20,6 @@ func exportRulesFromConfig(cfg *config.Config) bool {
 	for _, item := range rules {
 		fmt.Println(item)
 	}
-	return true
 }
 
 func showHelp() {
@@ -82,47 +58,33 @@ func main() {
 
 	cfg := config.LoadConfig(*configFilePath)
 
-	if cfg.Nftables.NftablesFilePath == "" {
-		cfg.Nftables.NftablesFilePath = "/etc/nftables.roscaelum.conf"
-	}
-
-	if cfg.Nftables.IpDefineFilePath == "" {
-		cfg.Nftables.IpDefineFilePath = "/etc/nftables.ipdefine.conf"
-	}
-
 	operation := flag.Arg(0)
 
-	if operation == "apply" {
-		writeRulesFromConfig(&cfg)
-		checkConfigFile(cfg.Nftables.NftablesFilePath)
-
-		// nftコマンドを実行して適用
-		flushNftablesRules()
-		applyNftablesRules(cfg.Nftables.NftablesFilePath)
-
+	switch operation {
+	case "apply":
+		if err := firewall.Apply(&cfg); err != nil {
+			log.MsgFatalAndExit(err, "Failed to apply firewall rules.")
+		}
 		log.MsgInfo("Firewall settings have been applied successfully.")
-	} else if operation == "enable" {
-		writeRulesFromConfig(&cfg)
-		checkConfigFile(cfg.Nftables.NftablesFilePath)
-
-		// nftコマンドを実行して適用
-		applyNftablesRules(cfg.Nftables.NftablesFilePath)
+	case "enable":
+		if err := firewall.Apply(&cfg); err != nil {
+			log.MsgFatalAndExit(err, "Failed to enable firewall.")
+		}
 		log.MsgInfo("roscaelum firewall is enabled.")
-	} else if operation == "export" {
-		// エクスポート
-		log.MsgDebug(fmt.Sprintf("configFilePath: %s", *configFilePath))
+	case "export":
+		// 人間が読める形式でルールをエクスポート（デバッグ用）
 		exportRulesFromConfig(&cfg)
-	} else if operation == "disable" {
-		// 設定をアンロードする
-		flushNftablesRules()
+	case "disable":
+		if err := firewall.Disable(); err != nil {
+			log.MsgFatalAndExit(err, "Failed to disable firewall.")
+		}
 		log.MsgInfo("roscaelum firewall is disabled.")
-	} else if operation == "" {
+	case "":
 		//コマンド説明
 		showHelp()
-	} else {
+	default:
 		log.MsgErr("Invalid args!\n")
 		showHelp()
 		os.Exit(1)
 	}
-
 }

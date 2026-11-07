@@ -2,7 +2,7 @@
 
 set -e
 
-required_commands=("wget" "curl" "unzip" "nft")
+required_commands=("wget" "curl" "unzip")
 
 for cmd in "${required_commands[@]}"; do
     if command -v "$cmd" > /dev/null 2>&1; then

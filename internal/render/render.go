@@ -35,10 +35,6 @@ func GenIpDefineRules(config *config.Config) []string {
 func GenRulesFromConfig(cfg *config.Config) []string {
 	var rules []string
 
-	// IpDefineFilePathをincludeする
-	// IpDefineFilePathにはユーザー定義のipsetが格納されている
-	rules = append(rules, MkInclude(cfg.Nftables.IpDefineFilePath))
-
 	//テーブル作成
 	rules = append(rules, MkTableStart("roscaelum"))
 

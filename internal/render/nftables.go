@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-func MkInclude(filePath string) string {
-	return fmt.Sprintf("include \"%s\"", filePath)
-}
-
 func MkDefine(name string, obj []string) string {
 	joinedString := strings.Join(obj, ", ")
 

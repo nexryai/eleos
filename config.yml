@@ -1,8 +1,3 @@
-# これを通常触る必要はないかも
-nftables:
-  configFilePath: "./nftables.roscaelum.conf"
-  ipDefineFilePath: "./nftables.ipdefine.conf"
-
 default:
   allowAllIn: false
   allowAllOut: false
