@@ -38,31 +38,3 @@ func TestIsValidIP(t *testing.T) {
 		t.Errorf("Expected %s to be an invalid IP address, but it is valid.", invalidIP)
 	}
 }
-
-// CheckIPAddressesのテスト
-func TestCheckIPAddresses(t *testing.T) {
-	validIPs := []string{"192.168.1.1", "10.0.0.1"}
-	invalidIPs := []string{"192.168.1.1", "invalidIP"}
-
-	if !CheckIPAddresses(validIPs) {
-		t.Error("Expected all IP addresses to be valid, but some are not.")
-	}
-
-	if CheckIPAddresses(invalidIPs) {
-		t.Error("Expected some IP addresses to be invalid, but all are valid.")
-	}
-}
-
-// IsIPv6のテスト
-func TestIsIPv6(t *testing.T) {
-	ipv6Address := "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
-	ipv4Address := "192.168.1.1"
-
-	if !IsIPv6(ipv6Address) {
-		t.Errorf("Expected %s to be an IPv6 address, but it is not.", ipv6Address)
-	}
-
-	if IsIPv6(ipv4Address) {
-		t.Errorf("Expected %s not to be an IPv6 address, but it is.", ipv4Address)
-	}
-}

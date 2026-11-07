@@ -4,7 +4,6 @@ go 1.21
 
 require (
 	github.com/google/nftables v0.3.0
-	github.com/google/uuid v1.6.0
 	github.com/lorenzosaino/go-sysctl v0.3.1
 	golang.org/x/sys v0.28.0
 	gopkg.in/yaml.v2 v2.4.0

@@ -2,10 +2,7 @@ package log
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"os"
-	"strconv"
-	"time"
 )
 
 var reset = "\033[0m"
@@ -46,19 +43,4 @@ func MsgFatalAndExit(err error, message string) {
 	MsgErr(errorInfo)
 	MsgDetail(message)
 	os.Exit(1)
-}
-
-func GetUnixTimestampString() string {
-	now := time.Now()
-	unix := now.Unix()
-	return strconv.FormatInt(unix, 10)
-}
-
-func GenBugCodeMessage(code string) string {
-	return fmt.Sprintf("Fatal internal error (bug code: \"%s\"). See the bug code table in the documentation.", code)
-}
-
-func GenUUID() string {
-	id := uuid.New()
-	return id.String()
 }

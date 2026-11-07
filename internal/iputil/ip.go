@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net"
 	"regexp"
-	"roscaelum/internal/log"
-	"strings"
 )
 
 // stringが有効なIPアドレスか識別する
@@ -15,21 +13,6 @@ func isValidIP(ip string) bool {
 	}
 	parsedIP := net.ParseIP(ip)
 	return parsedIP != nil
-}
-
-// []string内のすべての文字が有効なIPアドレスか識別する
-func CheckIPAddresses(ipAddresses []string) bool {
-	for _, ip := range ipAddresses {
-		if !isValidIP(ip) {
-			log.MsgWarn("Invalid IP: " + ip)
-			return false
-		}
-	}
-	return true
-}
-
-func IsIPv6(input string) bool {
-	return isValidIP(input) && strings.Contains(input, ":")
 }
 
 func ExtractIPAddress(input string) (string, error) {

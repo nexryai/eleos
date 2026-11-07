@@ -7,20 +7,7 @@ import (
 	"roscaelum/internal/config"
 	"roscaelum/internal/firewall"
 	"roscaelum/internal/log"
-	"roscaelum/internal/render"
 )
-
-func exportRulesFromConfig(cfg *config.Config) {
-	ipDefineRules := render.GenIpDefineRules(cfg)
-	for _, item := range ipDefineRules {
-		fmt.Println(item)
-	}
-
-	rules := render.GenRulesFromConfig(cfg)
-	for _, item := range rules {
-		fmt.Println(item)
-	}
-}
 
 func showHelp() {
 	fmt.Println("roscaelum firewall - Yet another human-friendly firewall \n\n",
@@ -71,9 +58,6 @@ func main() {
 			log.MsgFatalAndExit(err, "Failed to enable firewall.")
 		}
 		log.MsgInfo("roscaelum firewall is enabled.")
-	case "export":
-		// 人間が読める形式でルールをエクスポート（デバッグ用）
-		exportRulesFromConfig(&cfg)
 	case "disable":
 		if err := firewall.Disable(); err != nil {
 			log.MsgFatalAndExit(err, "Failed to disable firewall.")
