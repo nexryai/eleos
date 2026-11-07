@@ -43,22 +43,23 @@ func main() {
 
 	log.MsgDebug("configFilePath: " + *configFilePath)
 
-	cfg := config.LoadConfig(*configFilePath)
-
 	operation := flag.Arg(0)
 
 	switch operation {
 	case "apply":
+		cfg := config.LoadConfig(*configFilePath)
 		if err := firewall.Apply(&cfg); err != nil {
 			log.MsgFatalAndExit(err, "Failed to apply firewall rules.")
 		}
 		log.MsgInfo("Firewall settings have been applied successfully.")
 	case "enable":
+		cfg := config.LoadConfig(*configFilePath)
 		if err := firewall.Apply(&cfg); err != nil {
 			log.MsgFatalAndExit(err, "Failed to enable firewall.")
 		}
 		log.MsgInfo("roscaelum firewall is enabled.")
 	case "disable":
+		// 設定ファイルは不要
 		if err := firewall.Disable(); err != nil {
 			log.MsgFatalAndExit(err, "Failed to disable firewall.")
 		}
