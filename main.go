@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"lance-light/internal/config"
-	"lance-light/internal/log"
-	"lance-light/internal/render"
-	"lance-light/internal/system"
+	"roscaelum/internal/config"
+	"roscaelum/internal/log"
+	"roscaelum/internal/render"
+	"roscaelum/internal/system"
 	"os"
 )
 

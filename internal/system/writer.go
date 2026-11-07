@@ -1,7 +1,7 @@
 package system
 
 import (
-	"lance-light/internal/log"
+	"roscaelum/internal/log"
 	"os"
 	"strings"
 )

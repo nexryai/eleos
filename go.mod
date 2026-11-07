@@ -1,4 +1,4 @@
-module lance-light
+module roscaelum
 
 go 1.18
 

@@ -2,7 +2,7 @@ package config
 
 import (
 	"gopkg.in/yaml.v2"
-	"lance-light/internal/log"
+	"roscaelum/internal/log"
 	"os"
 )
 
