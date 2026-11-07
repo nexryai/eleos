@@ -15,19 +15,19 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: '1.22'
 
       - name: Build
         run: |
-          GOOS=linux GOARCH=amd64 go build -o rcfctl-amd64 main.go
-          GOOS=linux GOARCH=arm go build -o rcfctl-arm main.go
-          GOOS=linux GOARCH=arm64 go build -o rcfctl-arm64 main.go
-          GOOS=linux GOARCH=mips go build -o rcfctl-mips main.go
-          GOOS=linux GOARCH=mips64 go build -o rcfctl-mips64 main.go
-          GOOS=linux GOARCH=riscv64 go build -o rcfctl-riscv64 main.go
-          GOOS=linux GOARCH=ppc64 go build -o rcfctl-ppc64 main.go
-          GOOS=linux GOARCH=ppc64le go build -o rcfctl-ppc64le main.go
-          GOOS=linux GOARCH=s390x go build -o rcfctl-s390x main.go
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o rcfctl-amd64 main.go
+          GOOS=linux GOARCH=arm CGO_ENABLED=0 go build -o rcfctl-arm main.go
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rcfctl-arm64 main.go
+          GOOS=linux GOARCH=mips CGO_ENABLED=0 go build -o rcfctl-mips main.go
+          GOOS=linux GOARCH=mips64 CGO_ENABLED=0 go build -o rcfctl-mips64 main.go
+          GOOS=linux GOARCH=riscv64 CGO_ENABLED=0 go build -o rcfctl-riscv64 main.go
+          GOOS=linux GOARCH=ppc64 CGO_ENABLED=0 go build -o rcfctl-ppc64 main.go
+          GOOS=linux GOARCH=ppc64le CGO_ENABLED=0 go build -o rcfctl-ppc64le main.go
+          GOOS=linux GOARCH=s390x CGO_ENABLED=0 go build -o rcfctl-s390x main.go
 
       - name: Create release
         id: create_release
