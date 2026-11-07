@@ -11,6 +11,10 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  golang >= 1.21
 
+# The binary is a self-contained static Go binary; do not generate
+# debuginfo/debugsource subpackages.
+%global debug_package %{nil}
+
 %description
 roscaelum is a lightweight, simple, secure and essential firewall that
 manipulates nftables directly through netlink. It does not depend on the
