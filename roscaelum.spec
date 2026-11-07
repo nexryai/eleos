@@ -51,6 +51,13 @@ export GOTOOLCHAIN=auto
 go build -buildvcs=false -trimpath -ldflags "-s -w" -o rcfctl .
 
 %check
+export CGO_ENABLED=0
+export GOFLAGS=-mod=mod
+# Fedora sets GOTOOLCHAIN=local in the build environment, but the chroot's
+# Go may be older than the version required by go.mod. Allow downloading it,
+# like in the build section.
+export GOTOOLCHAIN=auto
+
 go test ./...
 
 %install
