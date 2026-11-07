@@ -22,7 +22,7 @@ SERVER_NS="rosca-server"
 CONFIG="/tmp/roscaelum-integration.yml"
 
 if [ ! -x "$BIN" ]; then
-	echo "rcfctl binary not found at $BIN. Run 'make' first." >&2
+	echo "rcfctl binary not found at $BIN. Run 'go build -o rcfctl main.go' first." >&2
 	exit 1
 fi
 

@@ -20,7 +20,7 @@ jobs:
     # コンテナは自身のネットワーク名前空間を持つので、ランナー(VM)本体の
     # ネットワークには影響しない。
     container:
-      image: golang:1.22
+      image: golang:1.27.3
       options: --privileged
     steps:
       - uses: actions/checkout@v4
