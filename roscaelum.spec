@@ -1,7 +1,7 @@
 # COPR builds this spec through the SCM "make srpm" method
 # (see .copr/Makefile).
 Name:           roscaelum
-Version:        0.7.0
+Version:        0.7.1
 Release:        1%{?dist}
 Summary:        Lightweight nftables firewall that operates via netlink
 
@@ -88,5 +88,9 @@ fi
 %config(noreplace) %{_sysconfdir}/roscaelum.yml
 
 %changelog
+* Sat Nov 07 2026 nexryai <nexryai@users.noreply.github.com> - 0.7.1-1
+- Run the check phase with GOTOOLCHAIN=auto so chroots with an older Go
+  toolchain can build
+
 * Sat Nov 07 2026 nexryai <nexryai@users.noreply.github.com> - 0.7.0-1
 - Initial packaging for COPR
