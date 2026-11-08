@@ -1,0 +1,3 @@
+#!/bin/sh
+# CLI wrapper: always operate on the snap's configuration file.
+exec "$SNAP/bin/rcfctl" -f "${ROSCAELUM_CONFIG:-$SNAP_DATA/roscaelum.yml}" "$@"

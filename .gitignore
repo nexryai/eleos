@@ -1,5 +1,5 @@
-rcfctl
-rcfctl-*
+/rcfctl
+/rcfctl-*
 memory.db
 _build/
 *.snap
