@@ -2,3 +2,7 @@ rcfctl
 rcfctl-*
 memory.db
 _build/
+*.snap
+parts/
+stage/
+prime/

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Seed the configuration on first install.
+set -eu
+
+CONFIG="$SNAP_DATA/roscaelum.yml"
+if [ ! -f "$CONFIG" ]; then
+    cp "$SNAP/default-config.yml" "$CONFIG"
+fi
