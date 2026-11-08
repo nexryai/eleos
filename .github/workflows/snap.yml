@@ -1,0 +1,74 @@
+name: snap
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build and publish snap (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: amd64
+          - runner: ubuntu-24.04-arm
+            platform: arm64
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          # Required for `version: git` in snapcraft.yaml.
+          fetch-depth: 0
+
+      - name: Select channel
+        id: channel
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=edge" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: Upload snap as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: roscaelum-snap-${{ matrix.platform }}
+          path: ${{ steps.build.outputs.snap }}
+
+      - name: Check store credentials
+        id: credentials
+        env:
+          CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          if [ -n "$CREDENTIALS" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SNAPCRAFT_STORE_CREDENTIALS is not configured; skipping publish"
+          fi
+
+      - name: Publish snap to ${{ steps.channel.outputs.channel }}
+        if: steps.credentials.outputs.available == 'true'
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: ${{ steps.channel.outputs.channel }}

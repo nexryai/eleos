@@ -1,7 +1,9 @@
 name: roscaelum
 title: roscaelum
 base: core24
-version: '0.7.1'
+# Derive the version from git: tags give the release version, commits on
+# main give a unique version for edge builds.
+version: git
 summary: Lightweight nftables firewall that operates via netlink
 description: |
   roscaelum is a lightweight, simple, secure and essential firewall that
