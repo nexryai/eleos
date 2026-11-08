@@ -57,7 +57,7 @@ parts:
     plugin: dump
     source: snap/local
     organize:
-      rcfctl: bin/rcfctl-cli
+      rcfctl-cli: bin/rcfctl-cli
       daemon: bin/daemon
 
   config:
