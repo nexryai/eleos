@@ -7,7 +7,7 @@ import (
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
 
-	"roscaelum/internal/config"
+	"eleos/internal/config"
 )
 
 func testConfig() *config.Config {

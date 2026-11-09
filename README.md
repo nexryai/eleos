@@ -1,4 +1,4 @@
-## roscaelum Firewall
+## eleos Firewall
 
 ### What is this?
 A lightweight, simple, secure and essential firewall that operates nftables
@@ -19,7 +19,7 @@ It warns about unsafe settings. It is written in memory-safe Go.
 It includes features that help make your server more secure, such as
 allowing access only on specific interfaces and denying access from
 arbitrary IP addresses.
-Want to build your own router? roscaelum includes features to help you
+Want to build your own router? eleos includes features to help you
 set up a simple home router!
 
 #### Fully offline operation
@@ -32,31 +32,31 @@ Note: disable any existing firewall before using this.
 #### Install from source
 ```sh
 # Build
-CGO_ENABLED=0 go build -o rcfctl main.go
+CGO_ENABLED=0 go build -o elctl main.go
 
 # Install (run as root)
-install -m 0755 rcfctl /usr/bin/rcfctl
-install -m 0644 systemd/roscaelum.service /etc/systemd/system/
-install -m 0644 config.default.yml /etc/roscaelum.yml
+install -m 0755 elctl /usr/bin/elctl
+install -m 0644 systemd/eleos.service /etc/systemd/system/
+install -m 0644 config.default.yml /etc/eleos.yml
 systemctl daemon-reload
 
 # Edit the rules
-nano /etc/roscaelum.yml
+nano /etc/eleos.yml
 
 # Apply
-rcfctl enable
+elctl enable
 
 # Apply automatically on boot
-systemctl enable roscaelum
+systemctl enable eleos
 ```
 
-After editing the configuration, re-apply it with `rcfctl apply`.
+After editing the configuration, re-apply it with `elctl apply`.
 
 ### Known issues
 
 #### On RHEL-based systems, systemd may complain about permissions
 This is caused by SELinux.
-`sudo restorecon -R /usr/bin/rcfctl` fixes it.
+`sudo restorecon -R /usr/bin/elctl` fixes it.
 
 #### Conflicts with Docker
 Set `allowAllFwd` to `true` to work around it.

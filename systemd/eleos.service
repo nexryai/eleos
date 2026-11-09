@@ -1,5 +1,5 @@
 [Unit]
-Description=roscaelum firewall
+Description=eleos firewall
 Wants=network-pre.target
 Before=network-pre.target
 
@@ -7,9 +7,9 @@ Before=network-pre.target
 Type=oneshot
 ProtectSystem=true
 ProtectHome=true
-ExecStart=/usr/bin/rcfctl enable
-ExecReload=/usr/bin/rcfctl apply
-ExecStop=/usr/bin/rcfctl disable
+ExecStart=/usr/bin/elctl enable
+ExecReload=/usr/bin/elctl apply
+ExecStop=/usr/bin/elctl disable
 RemainAfterExit=yes
 
 [Install]

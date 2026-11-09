@@ -1,9 +1,9 @@
 package config
 
 import (
+	"eleos/internal/log"
 	"gopkg.in/yaml.v2"
 	"os"
-	"roscaelum/internal/log"
 )
 
 type Config struct {

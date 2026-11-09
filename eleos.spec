@@ -1,12 +1,12 @@
 # COPR builds this spec through the SCM "make srpm" method
 # (see .copr/Makefile).
-Name:           roscaelum
-Version:        0.7.1
+Name:           eleos
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        Lightweight nftables firewall that operates via netlink
 
 License:        MIT
-URL:            https://github.com/nexryai/roscaelum
+URL:            https://github.com/nexryai/eleos
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  golang >= 1.21
@@ -16,7 +16,7 @@ BuildRequires:  golang >= 1.21
 %global debug_package %{nil}
 
 %description
-roscaelum is a lightweight, simple, secure and essential firewall that
+eleos is a lightweight, simple, secure and essential firewall that
 manipulates nftables directly through netlink. It does not depend on the
 nft(8) command and needs no external API access to generate or apply
 rules, so it works fully offline.
@@ -48,7 +48,7 @@ export GOTOOLCHAIN=auto
 %endif
 %{?goarch:export GOARCH=%{goarch}}
 
-go build -buildvcs=false -trimpath -ldflags "-s -w" -o rcfctl .
+go build -buildvcs=false -trimpath -ldflags "-s -w" -o elctl .
 
 %check
 export CGO_ENABLED=0
@@ -61,33 +61,36 @@ export GOTOOLCHAIN=auto
 go test ./...
 
 %install
-install -Dpm0755 rcfctl %{buildroot}%{_bindir}/rcfctl
-install -Dpm0644 systemd/roscaelum.service %{buildroot}%{_prefix}/lib/systemd/system/roscaelum.service
-install -Dpm0644 config.default.yml %{buildroot}%{_sysconfdir}/roscaelum.yml
+install -Dpm0755 elctl %{buildroot}%{_bindir}/elctl
+install -Dpm0644 systemd/eleos.service %{buildroot}%{_prefix}/lib/systemd/system/eleos.service
+install -Dpm0644 config.default.yml %{buildroot}%{_sysconfdir}/eleos.yml
 
 %post
 systemctl daemon-reload >/dev/null 2>&1 || :
 
 %preun
 if [ $1 -eq 0 ]; then
-    systemctl stop roscaelum.service >/dev/null 2>&1 || :
-    systemctl disable roscaelum.service >/dev/null 2>&1 || :
+    systemctl stop eleos.service >/dev/null 2>&1 || :
+    systemctl disable eleos.service >/dev/null 2>&1 || :
 fi
 
 %postun
 systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -eq 1 ]; then
-    systemctl try-restart roscaelum.service >/dev/null 2>&1 || :
+    systemctl try-restart eleos.service >/dev/null 2>&1 || :
 fi
 
 %files
 %license LICENSE
 %doc README.md
-%{_bindir}/rcfctl
-%{_prefix}/lib/systemd/system/roscaelum.service
-%config(noreplace) %{_sysconfdir}/roscaelum.yml
+%{_bindir}/elctl
+%{_prefix}/lib/systemd/system/eleos.service
+%config(noreplace) %{_sysconfdir}/eleos.yml
 
 %changelog
+* Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.0-1
+- Rename the project and package to eleos, and the command to elctl
+
 * Sat Nov 07 2026 nexryai <nexryai@users.noreply.github.com> - 0.7.1-1
 - Run the check phase with GOTOOLCHAIN=auto so chroots with an older Go
   toolchain can build

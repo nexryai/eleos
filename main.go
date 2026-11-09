@@ -1,27 +1,27 @@
 package main
 
 import (
+	"eleos/internal/config"
+	"eleos/internal/firewall"
+	"eleos/internal/log"
 	"flag"
 	"fmt"
 	"os"
-	"roscaelum/internal/config"
-	"roscaelum/internal/firewall"
-	"roscaelum/internal/log"
 )
 
 func showHelp() {
-	fmt.Println("roscaelum firewall - Yet another human-friendly firewall \n\n",
+	fmt.Println("eleos firewall - Yet another human-friendly firewall \n\n",
 		"(c)2023 nexryai\nThis program is licensed under the MIT License, and anyone can audit and contribute to it.\n\n\n",
 		"[usage]\n",
-		"Enable firewall:\n  ▶ rcfctl enable\n\n",
-		"Apply rules when configuration is updated:\n  ▶ rcfctl apply\n\n",
-		"Disable firewall:\n  ▶ rcfctl disable\n\n",
+		"Enable firewall:\n  ▶ elctl enable\n\n",
+		"Apply rules when configuration is updated:\n  ▶ elctl apply\n\n",
+		"Disable firewall:\n  ▶ elctl disable\n\n",
 		"[options]\n",
-		"-f [PATH]: Specify the path to the configuration file (Default: /etc/roscaelum.yml)")
+		"-f [PATH]: Specify the path to the configuration file (Default: /etc/eleos.yml)")
 }
 
 func main() {
-	configFilePath := flag.String("f", "/etc/roscaelum.yml", "Path of cfg.yml")
+	configFilePath := flag.String("f", "/etc/eleos.yml", "Path of cfg.yml")
 	debugMode := flag.Bool("debug", false, "Enable debug mode")
 
 	flag.Parse()
@@ -30,12 +30,12 @@ func main() {
 	// 環境変数以外にもいいやり方あるかもしれない。毎回configをcore.MsgDbg呼ぶ時に引数渡すのは面倒だから避けたい。
 	if *debugMode {
 		log.MsgInfo("debug mode!")
-		err := os.Setenv("ROSCAELUM_DEBUG_MODE", "true")
+		err := os.Setenv("ELEOS_DEBUG_MODE", "true")
 		if err != nil {
 			log.MsgFatalAndExit(err, "Failed to set environment variable.")
 		}
 	} else {
-		err := os.Setenv("ROSCAELUM_DEBUG_MODE", "false")
+		err := os.Setenv("ELEOS_DEBUG_MODE", "false")
 		if err != nil {
 			log.MsgFatalAndExit(err, "Failed to set environment variable.")
 		}
@@ -57,13 +57,13 @@ func main() {
 		if err := firewall.Apply(&cfg); err != nil {
 			log.MsgFatalAndExit(err, "Failed to enable firewall.")
 		}
-		log.MsgInfo("roscaelum firewall is enabled.")
+		log.MsgInfo("eleos firewall is enabled.")
 	case "disable":
 		// 設定ファイルは不要
 		if err := firewall.Disable(); err != nil {
 			log.MsgFatalAndExit(err, "Failed to disable firewall.")
 		}
-		log.MsgInfo("roscaelum firewall is disabled.")
+		log.MsgInfo("eleos firewall is disabled.")
 	case "":
 		//コマンド説明
 		showHelp()

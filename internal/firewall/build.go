@@ -11,13 +11,13 @@ import (
 	"github.com/lorenzosaino/go-sysctl"
 	"golang.org/x/sys/unix"
 
-	"roscaelum/internal/config"
-	"roscaelum/internal/iputil"
-	"roscaelum/internal/log"
+	"eleos/internal/config"
+	"eleos/internal/iputil"
+	"eleos/internal/log"
 )
 
 // TableNameはnftablesのテーブル名
-const TableName = "roscaelum"
+const TableName = "eleos"
 
 // Rulesetは適用対象のテーブル・チェーン・ルールの集合
 type Ruleset struct {
@@ -201,21 +201,21 @@ func (b *builder) buildInput() error {
 	// 確立済み・関連の接続は許可し、不正なパケットはログを残して落とす
 	b.add("input", append(matchCtState(expr.CtStateBitESTABLISHED|expr.CtStateBitRELATED), accept())...)
 	b.add("input", append(matchCtState(expr.CtStateBitINVALID),
-		logPrefix("[roscaelum] Drop invalid packet: "), drop())...)
+		logPrefix("[eleos] Drop invalid packet: "), drop())...)
 	b.add("input", append(matchIIF("lo"), accept())...)
 
 	// SYNではない新規接続をブロック
 	b.add("input", append(append(matchL4(unix.IPPROTO_TCP),
 		append(matchTCPFlags(tcpFlagFin|tcpFlagSyn|tcpFlagRst|tcpFlagPsh|tcpFlagAck, tcpFlagSyn, true),
 			matchCtState(expr.CtStateBitNEW)...)...),
-		logPrefix("[roscaelum] Drop invalid packet: "), drop())...)
+		logPrefix("[eleos] Drop invalid packet: "), drop())...)
 
 	// ポートスキャンをブロック
 	if !cfg.Security.DisablePortScanProtection {
 		b.add("input", append(append(matchL4(unix.IPPROTO_TCP), matchTCPFlags(tcpFlagFin|tcpFlagPsh|tcpFlagUrg, tcpFlagFin|tcpFlagPsh|tcpFlagUrg, false)...),
-			logPrefix("[roscaelum] TCP XMAS blocked: "), counter(), drop())...)
+			logPrefix("[eleos] TCP XMAS blocked: "), counter(), drop())...)
 		b.add("input", append(append(matchL4(unix.IPPROTO_TCP), matchTCPFlags(tcpFlagFin|tcpFlagSyn|tcpFlagRst|tcpFlagPsh|tcpFlagAck|tcpFlagUrg, 0, false)...),
-			logPrefix("[roscaelum] TCP NULL blocked: "), counter(), drop())...)
+			logPrefix("[eleos] TCP NULL blocked: "), counter(), drop())...)
 
 		// SYNパケットで異常に小さいMSSを持つものをブロック
 		mssMatch := append(matchL4(unix.IPPROTO_TCP), matchTCPFlags(tcpFlagFin|tcpFlagSyn|tcpFlagRst|tcpFlagPsh|tcpFlagAck|tcpFlagUrg, tcpFlagSyn, false)...)
@@ -224,7 +224,7 @@ func (b *builder) buildInput() error {
 			&expr.Cmp{Op: expr.CmpOpGte, Register: 1, Data: []byte{0, 1}},
 			&expr.Cmp{Op: expr.CmpOpLte, Register: 1, Data: []byte{2, 23}})
 		b.add("input", append(mssMatch,
-			logPrefix("[roscaelum] TCP MSS blocked: "), counter(), drop())...)
+			logPrefix("[eleos] TCP MSS blocked: "), counter(), drop())...)
 	} else {
 		log.MsgWarn("Port scan protection is DISABLED!")
 	}
@@ -236,7 +236,7 @@ func (b *builder) buildInput() error {
 			&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 2, Mask: []byte{0x1f, 0xff}, Xor: []byte{0, 0}},
 			&expr.Cmp{Op: expr.CmpOpNeq, Register: 1, Data: []byte{0, 0}})
 		b.add("input", append(fragmentMatch,
-			logPrefix("[roscaelum] IP FRAGMENTS detected and blocked: "), counter(), drop())...)
+			logPrefix("[eleos] IP FRAGMENTS detected and blocked: "), counter(), drop())...)
 	}
 
 	// alwaysDenyIPを拒否
@@ -252,10 +252,10 @@ func (b *builder) buildInput() error {
 	if cfg.Default.AllowPing {
 		for _, ipv4 := range []bool{true, false} {
 			icmpType := byte(128)
-			prefix := "[roscaelum] icmpv6 echo-request rate limit exceeded: "
+			prefix := "[eleos] icmpv6 echo-request rate limit exceeded: "
 			if ipv4 {
 				icmpType = 8
-				prefix = "[roscaelum] icmp echo-request rate limit exceeded: "
+				prefix = "[eleos] icmp echo-request rate limit exceeded: "
 			}
 			b.add("input", append(matchIcmpType(ipv4, icmpType), rateLimit(4, 5), accept())...)
 			b.add("input", append(matchIcmpType(ipv4, icmpType), logPrefix(prefix), counter(), drop())...)
@@ -291,7 +291,7 @@ func (b *builder) buildInput() error {
 
 	// ログが有効ならログする
 	if cfg.Default.EnableLogging {
-		b.add("input", logPrefix("[roscaelum] Access Denied: "), counter(), drop())
+		b.add("input", logPrefix("[eleos] Access Denied: "), counter(), drop())
 	}
 
 	return nil
@@ -352,7 +352,7 @@ func (b *builder) buildOutput() error {
 	b.add("output", append(append(matchL4(unix.IPPROTO_TCP), matchTCPFlags(tcpFlagFin|tcpFlagSyn|tcpFlagRst|tcpFlagPsh|tcpFlagAck, tcpFlagSyn, true)...), accept())...)
 
 	if cfg.Default.EnableLogging {
-		b.add("output", logPrefix("[roscaelum] Not allowed syn-packet was dropped: "), counter(), drop())
+		b.add("output", logPrefix("[eleos] Not allowed syn-packet was dropped: "), counter(), drop())
 	}
 
 	return nil
@@ -544,7 +544,7 @@ func (b *builder) buildNat() error {
 
 func (b *builder) buildSynFlood() {
 	b.add("syn-flood", rateLimit(30, 60), counter(), &expr.Verdict{Kind: expr.VerdictReturn})
-	b.add("syn-flood", logPrefix("[roscaelum] SYN-flood attack mitigated: "), counter(), drop())
+	b.add("syn-flood", logPrefix("[eleos] SYN-flood attack mitigated: "), counter(), drop())
 }
 
 func containsString(arr []string, target string) bool {

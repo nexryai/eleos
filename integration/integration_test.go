@@ -35,16 +35,16 @@ func newEnv(t *testing.T) *env {
 
 func binaryPath(t *testing.T) string {
 	t.Helper()
-	p := os.Getenv("RCFCTL_BIN")
+	p := os.Getenv("ELCTL_BIN")
 	if p == "" {
-		p = filepath.Join("..", "rcfctl")
+		p = filepath.Join("..", "elctl")
 	}
 	abs, err := filepath.Abs(p)
 	if err != nil {
-		t.Fatalf("failed to resolve rcfctl path: %v", err)
+		t.Fatalf("failed to resolve elctl path: %v", err)
 	}
 	if st, err := os.Stat(abs); err != nil || st.IsDir() {
-		t.Fatalf("rcfctl binary not found at %s; build it first (go build -o rcfctl main.go) or set RCFCTL_BIN", abs)
+		t.Fatalf("elctl binary not found at %s; build it first (go build -o elctl main.go) or set ELCTL_BIN", abs)
 	}
 	return abs
 }
@@ -117,8 +117,8 @@ func (e *env) writeConfig(content string) string {
 	return path
 }
 
-// rcfctl runs the binary inside ns.
-func (e *env) rcfctl(ns, configPath string, operation string) string {
+// elctl runs the binary inside ns.
+func (e *env) elctl(ns, configPath string, operation string) string {
 	e.t.Helper()
 	args := []string{"netns", "exec", ns, e.bin}
 	if configPath != "" {
@@ -130,12 +130,12 @@ func (e *env) rcfctl(ns, configPath string, operation string) string {
 
 func (e *env) ruleset(ns string) string {
 	e.t.Helper()
-	return e.must("ip", "netns", "exec", ns, "nft", "list", "table", "inet", "roscaelum")
+	return e.must("ip", "netns", "exec", ns, "nft", "list", "table", "inet", "eleos")
 }
 
 func (e *env) tableExists(ns string) bool {
 	e.t.Helper()
-	_, err := e.run("ip", "netns", "exec", ns, "nft", "list", "table", "inet", "roscaelum")
+	_, err := e.run("ip", "netns", "exec", ns, "nft", "list", "table", "inet", "eleos")
 	return err == nil
 }
 
@@ -285,7 +285,7 @@ ports:
 	e.serve(srv, "tcp-echo", "0.0.0.0:8080")
 	e.serve(srv, "tcp-echo", "0.0.0.0:8081")
 
-	e.rcfctl(srv, cfg, "enable")
+	e.elctl(srv, cfg, "enable")
 	e.mustContain(srv, "tcp dport 8080", "10.0.0.0/24", `iifname "`+ifS+`" tcp dport 8081`, "ip saddr 10.9.0.2 drop", "policy drop")
 
 	e.expectReachable(cli, "tcp-dial", "10.0.0.1:8080")
@@ -325,7 +325,7 @@ ports:
 	e.serve(srv, "udp-echo", "0.0.0.0:9090")
 	e.serve(srv, "udp-echo", "0.0.0.0:9091")
 
-	e.rcfctl(srv, cfg, "enable")
+	e.elctl(srv, cfg, "enable")
 	e.mustContain(srv, "udp dport 9090", "icmp type echo-request")
 
 	e.expectReachable(cli, "udp-dial", "10.0.0.1:9090")
@@ -373,7 +373,7 @@ ports:
 `)
 
 	e.serve(srv, "tcp-echo", "0.0.0.0:8082")
-	e.rcfctl(srv, cfg, "enable")
+	e.elctl(srv, cfg, "enable")
 	e.mustContain(srv, "tcp dport 8082", "ip saddr 10.0.0.2")
 
 	e.expectReachable(cli, "tcp-dial", "10.0.0.1:8082")
@@ -414,7 +414,7 @@ ports:
 	// IPv6 neighbor discovery needs a moment over a fresh veth pair.
 	time.Sleep(500 * time.Millisecond)
 
-	e.rcfctl(srv, cfg, "enable")
+	e.elctl(srv, cfg, "enable")
 	e.mustContain(srv, "ip6 saddr fd00::/64", "tcp dport 8083", "nd-neighbor-solicit")
 
 	e.expectReachable(cli, "tcp-dial", "[fd00::1]:8083")
@@ -454,7 +454,7 @@ outbound:
 	e.serve(cli, "tcp-echo", "0.0.0.0:7000")
 	e.serve(cli, "tcp-echo", "0.0.0.0:7001")
 
-	e.rcfctl(srv, cfg, "enable")
+	e.elctl(srv, cfg, "enable")
 	e.mustContain(srv, "tcp dport 7000", "policy drop")
 
 	e.expectReachable(srv, "tcp-dial", "10.0.0.2:7000")
@@ -509,7 +509,7 @@ nat:
 	e.serve(lan, "tcp-echo", "0.0.0.0:8085")
 	e.serve(wan, "tcp-echo", "0.0.0.0:8086")
 
-	e.rcfctl(rtr, cfg, "enable")
+	e.elctl(rtr, cfg, "enable")
 	e.mustContain(rtr,
 		"masquerade",
 		"dnat",
@@ -527,8 +527,8 @@ nat:
 	e.expectReachable(lan, "tcp-dial", "192.0.2.2:8086")
 
 	// Re-applying must be idempotent and keep working.
-	e.rcfctl(rtr, cfg, "enable")
-	e.rcfctl(rtr, cfg, "apply")
+	e.elctl(rtr, cfg, "enable")
+	e.elctl(rtr, cfg, "apply")
 	e.expectReachable(wan, "tcp-dial", "192.0.2.1:8085")
 	e.expectReachable(lan, "tcp-dial", "192.0.2.2:8086")
 }
@@ -555,7 +555,7 @@ default:
   enableLogging: false
 `)
 
-	e.rcfctl(srv, cfg, "enable")
+	e.elctl(srv, cfg, "enable")
 	if !e.tableExists(srv) {
 		t.Fatal("table should exist after enable")
 	}
@@ -563,7 +563,7 @@ default:
 		t.Error("ping should be blocked when allowPing is false")
 	}
 
-	e.rcfctl(srv, "", "disable")
+	e.elctl(srv, "", "disable")
 	if e.tableExists(srv) {
 		t.Error("table should be removed after disable")
 	}

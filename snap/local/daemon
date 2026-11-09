@@ -3,18 +3,18 @@
 #
 # The firewall-control interface is not auto-connected, so the first
 # apply attempts may fail until the user runs:
-#   sudo snap connect roscaelum:firewall-control
+#   sudo snap connect eleos:firewall-control
 # Retry periodically and re-apply whenever the configuration changes.
 set -u
 
-CONFIG="${ROSCAELUM_CONFIG:-$SNAP_DATA/roscaelum.yml}"
+CONFIG="${ELEOS_CONFIG:-$SNAP_DATA/eleos.yml}"
 LAST=""
 
 while :; do
     if [ -f "$CONFIG" ]; then
         SUM="$(sha256sum "$CONFIG" | cut -d' ' -f1)"
         if [ "$SUM" != "$LAST" ]; then
-            if "$SNAP/bin/rcfctl" -f "$CONFIG" apply; then
+            if "$SNAP/bin/elctl" -f "$CONFIG" apply; then
                 LAST="$SUM"
             fi
         fi

@@ -1,26 +1,26 @@
-name: roscaelum
-title: roscaelum
+name: eleos
+title: eleos
 base: core24
 # Derive the version from git: tags give the release version, commits on
 # main give a unique version for edge builds.
 version: git
 summary: Lightweight nftables firewall that operates via netlink
 description: |
-  roscaelum is a lightweight, simple, secure and essential firewall that
+  eleos is a lightweight, simple, secure and essential firewall that
   manipulates nftables directly through netlink. It does not depend on the
   nft(8) command and needs no external API access to generate or apply rules.
 
   This snap runs strictly confined. The privileged firewall-control
   interface has to be connected manually before rules can be applied:
 
-      sudo snap connect roscaelum:firewall-control
+      sudo snap connect eleos:firewall-control
 
-  Configuration lives in /var/snap/roscaelum/current/roscaelum.yml.
+  Configuration lives in /var/snap/eleos/current/eleos.yml.
 license: MIT
-website: https://github.com/nexryai/roscaelum
-contact: https://github.com/nexryai/roscaelum/issues
-issues: https://github.com/nexryai/roscaelum/issues
-source-code: https://github.com/nexryai/roscaelum
+website: https://github.com/nexryai/eleos
+contact: https://github.com/nexryai/eleos/issues
+issues: https://github.com/nexryai/eleos/issues
+source-code: https://github.com/nexryai/eleos
 
 grade: stable
 confinement: strict
@@ -31,8 +31,8 @@ platforms:
   riscv64:
 
 apps:
-  rcfctl:
-    command: bin/rcfctl-cli
+  elctl:
+    command: bin/elctl-cli
     plugs:
       - firewall-control
   daemon:
@@ -42,7 +42,7 @@ apps:
       - firewall-control
 
 parts:
-  roscaelum:
+  eleos:
     plugin: go
     source: .
     build-packages:
@@ -53,13 +53,13 @@ parts:
       export CGO_ENABLED=0
       export GOTOOLCHAIN=auto
       go build -buildvcs=false -trimpath -ldflags="-s -w" \
-        -o "$SNAPCRAFT_PART_INSTALL/bin/rcfctl" .
+        -o "$SNAPCRAFT_PART_INSTALL/bin/elctl" .
 
   wrappers:
     plugin: dump
     source: snap/local
     organize:
-      rcfctl-cli: bin/rcfctl-cli
+      elctl-cli: bin/elctl-cli
       daemon: bin/daemon
 
   config:

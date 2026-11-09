@@ -1,0 +1,3 @@
+#!/bin/sh
+# CLI wrapper: always operate on the snap's configuration file.
+exec "$SNAP/bin/elctl" -f "${ELEOS_CONFIG:-$SNAP_DATA/eleos.yml}" "$@"

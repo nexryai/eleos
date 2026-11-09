@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/nftables"
 
-	"roscaelum/internal/config"
+	"eleos/internal/config"
 )
 
 // Applyは設定からRulesetを構築し、既存のテーブルを置き換える形でアトミックに適用する
@@ -62,7 +62,7 @@ func Disable() error {
 	return nil
 }
 
-// deleteTableIfExistsはroscaelumテーブルが存在すれば削除をバッチに積む
+// deleteTableIfExistsはeleosテーブルが存在すれば削除をバッチに積む
 func deleteTableIfExists(conn *nftables.Conn) (bool, error) {
 	tables, err := conn.ListTables()
 	if err != nil {

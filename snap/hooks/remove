@@ -1,4 +1,4 @@
 #!/bin/sh
 # Best effort: remove our nftables table when the snap is removed.
 # The firewall-control interface may already be disconnected at this point.
-"$SNAP/bin/rcfctl" disable >/dev/null 2>&1 || true
+"$SNAP/bin/elctl" disable >/dev/null 2>&1 || true

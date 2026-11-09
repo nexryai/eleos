@@ -7,7 +7,7 @@
 # network access even when the package builds themselves do not) and then
 # creates the SRPM that COPR rebuilds in each chroot.
 
-SPEC   := roscaelum.spec
+SPEC   := eleos.spec
 TOPDIR := $(CURDIR)/_build
 OUTDIR := $(if $(outdir),$(outdir),.)
 

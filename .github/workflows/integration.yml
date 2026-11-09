@@ -32,10 +32,10 @@ jobs:
           nft --version
           uname -r
 
-      - name: Build rcfctl
-        run: CGO_ENABLED=0 go build -o rcfctl main.go
+      - name: Build elctl
+        run: CGO_ENABLED=0 go build -o elctl main.go
 
       - name: Run nftables integration tests
         env:
-          RCFCTL_BIN: ${{ github.workspace }}/rcfctl
+          ELCTL_BIN: ${{ github.workspace }}/elctl
         run: go test -tags integration -v -count=1 -timeout 10m ./integration/...

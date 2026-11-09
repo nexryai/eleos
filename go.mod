@@ -1,4 +1,4 @@
-module roscaelum
+module eleos
 
 go 1.26.10
 
