@@ -1,7 +1,7 @@
 # COPR builds this spec through the SCM "make srpm" method
 # (see .copr/Makefile).
 Name:           eleos
-Version:        0.8.1
+Version:        0.8.2
 Release:        1%{?dist}
 Summary:        Lightweight nftables firewall that operates via netlink
 
@@ -29,6 +29,9 @@ export CGO_ENABLED=0
 export GOFLAGS=-mod=mod
 # Allow the Go toolchain to download the version required by go.mod when
 # the distribution packages an older Go (requires internet access).
+# Microsoft's Go (Azure Linux) refuses GOTOOLCHAIN=auto unless the following
+# variable is set; it is ignored by other Go distributions.
+export MS_GOTOOLCHAIN_ALLOW_NON_LOCAL=1
 export GOTOOLCHAIN=auto
 
 %ifarch x86_64
@@ -55,7 +58,8 @@ export CGO_ENABLED=0
 export GOFLAGS=-mod=mod
 # Fedora sets GOTOOLCHAIN=local in the build environment, but the chroot's
 # Go may be older than the version required by go.mod. Allow downloading it,
-# like in the build section.
+# like in the build section. See also the Microsoft Go note there.
+export MS_GOTOOLCHAIN_ALLOW_NON_LOCAL=1
 export GOTOOLCHAIN=auto
 
 go test ./...
@@ -88,6 +92,9 @@ fi
 %config(noreplace) %{_sysconfdir}/eleos.yml
 
 %changelog
+* Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.2-1
+- Allow GOTOOLCHAIN=auto with the Microsoft build of Go (Azure Linux)
+
 * Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.1-1
 - New release with corrected snap packaging
 
