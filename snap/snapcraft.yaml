@@ -43,13 +43,18 @@ apps:
 
 parts:
   eleos:
-    plugin: go
+    # Use the nil plugin and build manually: the go plugin validates the
+    # compiler version, which fails when GOTOOLCHAIN=auto has to download a
+    # newer toolchain (the validation parses the "go: downloading ..." line).
+    plugin: nil
     source: .
     build-packages:
+      - git
       - golang-go
     build-attributes:
       - no-patchelf
     override-build: |
+      cd "$SNAPCRAFT_PART_SRC"
       export CGO_ENABLED=0
       export GOTOOLCHAIN=auto
       go build -buildvcs=false -trimpath -ldflags="-s -w" \
