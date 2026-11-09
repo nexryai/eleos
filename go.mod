@@ -5,7 +5,7 @@ go 1.26.10
 require (
 	github.com/google/nftables v0.3.0
 	github.com/lorenzosaino/go-sysctl v0.3.1
-	golang.org/x/sys v0.45.0
+	golang.org/x/sys v0.49.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
