@@ -1,7 +1,7 @@
 # COPR builds this spec through the SCM "make srpm" method
 # (see .copr/Makefile).
 Name:           eleos
-Version:        0.8.2
+Version:        0.8.3
 Release:        1%{?dist}
 Summary:        Lightweight nftables firewall that operates via netlink
 
@@ -10,6 +10,8 @@ URL:            https://github.com/nexryai/eleos
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  golang >= 1.21
+# Needed so Go can verify TLS when downloading modules/toolchains.
+BuildRequires:  ca-certificates
 
 # The binary is a self-contained static Go binary; do not generate
 # debuginfo/debugsource subpackages.
@@ -92,6 +94,10 @@ fi
 %config(noreplace) %{_sysconfdir}/eleos.yml
 
 %changelog
+* Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.3-1
+- Require ca-certificates so Go can verify TLS on minimal chroots
+  (e.g. Azure Linux)
+
 * Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.2-1
 - Allow GOTOOLCHAIN=auto with the Microsoft build of Go (Azure Linux)
 
