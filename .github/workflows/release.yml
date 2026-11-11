@@ -144,9 +144,9 @@ jobs:
           cat > public/index.html <<'HTML'
           <!doctype html>
           <html lang="en">
-          <head><meta charset="utf-8"><title>eleos APT repository</title></head>
+          <head><meta charset="utf-8"><title>eleos apt repository</title></head>
           <body>
-          <h1>eleos APT repository</h1>
+          <h1>eleos apt repository</h1>
           <pre>
           curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
             | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
