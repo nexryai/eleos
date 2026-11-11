@@ -42,6 +42,17 @@ If you are using one of the following distributions, you can install it from the
  - openSUSE
 
 
+```sh
+sudo dnf copr enable nexryai/eleos
+sudo dnf install eleos
+
+# Edit the rules
+sudo nano /etc/eleos.yml
+
+sudo elctl enable
+sudo systemctl enable eleos
+```
+
 #### Install from source
 ```sh
 # Build
