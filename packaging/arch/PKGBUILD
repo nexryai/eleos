@@ -1,0 +1,56 @@
+pkgname=eleos
+pkgver=0.8.5
+pkgrel=1
+pkgdesc="Lightweight nftables firewall configured with YAML and applied over netlink"
+arch=('x86_64' 'aarch64')
+url="https://github.com/nexryai/eleos"
+license=('MIT')
+depends=()
+makedepends=('go')
+backup=('etc/eleos.yml')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('3ccdcf65d5c55f5cc6a11b4e923bd74cd6a2058ba50c8719977517f4148663e0')
+# The binary is a self-contained static Go build and is already stripped by
+# -ldflags '-s -w'. Skipping makepkg's strip/debug steps also lets the same
+# PKGBUILD cross-compile the aarch64 package on an x86_64 build host.
+options=('!strip' '!debug')
+
+build() {
+	cd "$pkgname-$pkgver"
+
+	local -A goarch=([x86_64]=amd64 [aarch64]=arm64)
+
+	export CGO_ENABLED=0
+	export GOOS=linux
+	export GOARCH="${goarch[$CARCH]:-$CARCH}"
+	# Arch may package an older Go than the patch-level version in go.mod.
+	export GOTOOLCHAIN=auto
+
+	go build -buildvcs=false -trimpath -ldflags '-s -w' -o elctl .
+}
+
+check() {
+	cd "$pkgname-$pkgver"
+
+	# A cross-compiled package cannot run its own tests on the build host.
+	# Native Arch Linux ARM builds (and x86_64 builds) still run the suite.
+	if [[ $CARCH != "$(uname -m)" ]]; then
+		warning "Skipping tests for cross-compiled $CARCH package"
+		return 0
+	fi
+
+	export CGO_ENABLED=0
+	export GOTOOLCHAIN=auto
+
+	go test ./...
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+
+	install -Dm755 elctl "$pkgdir/usr/bin/elctl"
+	install -Dm644 systemd/eleos.service "$pkgdir/usr/lib/systemd/system/eleos.service"
+	install -Dm644 config.default.yml "$pkgdir/etc/eleos.yml"
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+	install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}
