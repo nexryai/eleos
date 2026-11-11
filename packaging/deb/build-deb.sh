@@ -38,10 +38,8 @@ Section: net
 Priority: optional
 Depends: systemd
 Homepage: https://github.com/nexryai/eleos
-Description: Lightweight nftables firewall that operates via netlink
- eleos is a lightweight and simple firewall that manipulates nftables
- directly through netlink. It does not depend on the nft(8) command and
- needs no external API access to generate or apply rules.
+Description: Yet another human-friendly firewall
+ eleos is a lightweight and simple firewall.
 EOF
 
 echo /etc/eleos.yml > "$ROOT/DEBIAN/conffiles"
