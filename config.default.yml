@@ -6,5 +6,6 @@ default:
   enableIPv6: true
 
 ports:
-  - port: 22
-    proto: "tcp"
+  # mDNS
+  - port: 5353
+    proto: "udp"
