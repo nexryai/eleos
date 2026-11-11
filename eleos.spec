@@ -1,7 +1,7 @@
 # COPR builds this spec through the SCM "make srpm" method
 # (see .copr/Makefile).
 Name:           eleos
-Version:        0.8.3
+Version:        0.8.4
 Release:        1%{?dist}
 Summary:        Lightweight nftables firewall that operates via netlink
 
@@ -94,6 +94,9 @@ fi
 %config(noreplace) %{_sysconfdir}/eleos.yml
 
 %changelog
+* Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.4-1
+- Update README and default configuration
+
 * Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.3-1
 - Require ca-certificates so Go can verify TLS on minimal chroots
   (e.g. Azure Linux)
