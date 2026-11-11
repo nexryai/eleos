@@ -1,11 +1,11 @@
-## eleos Firewall
+# eleos firewall
 
-### What is this?
+## What is this?
 A lightweight, simple, secure and essential firewall that operates nftables
 directly via netlink.
 Under development.
 
-### Design principles
+## Design principles
 
 #### Simple and easy to use
 All configuration is managed in YAML. No more hammering `ufw status`!
@@ -20,10 +20,11 @@ arbitrary IP addresses.
 Want to build your own router? eleos includes features to help you
 set up a simple home router!
 
-### Usage
-Note: disable any existing firewall before using this.
+## Usage
+> [!CAUTION]
+> disable any existing firewall before using this.
 
-#### Install with snap
+### Install with snap
 <a href="https://snapcraft.io/eleos" target="_blank">
    <img width="200px" height="auto" alt="Get it from the Snap Store" src=https://snapcraft.io/en/dark/install.svg />
 </a>
@@ -42,7 +43,7 @@ Configuration lives in:
 /var/snap/eleos/current/eleos.yml
 ```
 
-#### Install from dnf repositories
+### Install from dnf repositories
 If you are using one of the following distributions, you can install it from the [Official Copr](https://copr.fedorainfracloud.org/coprs/nexryai/eleos/).
 
  - Fedora
@@ -90,9 +91,9 @@ systemctl enable eleos
 
 After editing the configuration, re-apply it with `elctl apply`.
 
-### Known issues
+## Known issues
 
-#### On RHEL-based systems, systemd may complain about permissions
+### On RHEL-based systems, systemd may complain about permissions
 This is caused by SELinux.
 `sudo restorecon -R /usr/bin/elctl` fixes it.
 
