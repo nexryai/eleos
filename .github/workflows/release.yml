@@ -52,9 +52,43 @@ jobs:
             --generate-notes \
             eleos-linux-*.zip dist/*.deb
 
-  apt:
-    name: Publish APT repository
+  arch:
+    name: Build Arch package (${{ matrix.arch }})
     needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build package
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          docker run --rm \
+            --volume "$PWD:/work" \
+            --workdir /work \
+            archlinux:latest \
+            bash -c "pacman -Syu --noconfirm --needed base-devel go curl git >/dev/null && packaging/arch/build.sh '$version' '${{ matrix.arch }}' dist"
+
+      - name: Upload package to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          assets=(dist/*.pkg.tar.zst)
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+
+  apt:
+    name: Publish package repositories
+    needs:
+      - release
+      - arch
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -73,7 +107,7 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::APT_GPG_PRIVATE_KEY is not configured; skipping the APT repository deployment"
+            echo "::notice::APT_GPG_PRIVATE_KEY is not configured; skipping the package repository deployment"
           fi
 
       - name: Install tools
@@ -93,6 +127,52 @@ jobs:
               --dir public/pool/main/e/eleos || true
           done
           ls -l public/pool/main/e/eleos
+
+      - name: Collect Arch packages
+        if: steps.key.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p public/pacman/pool
+          for tag in $(gh release list --limit 100 --json tagName -q '.[].tagName'); do
+            gh release download "$tag" \
+              --pattern '*.pkg.tar.zst' \
+              --pattern '*.pkg.tar.zst.sig' \
+              --dir public/pacman/pool || true
+          done
+          shopt -s nullglob
+          for file in public/pacman/pool/*; do
+            case "$file" in
+              *-x86_64.pkg.tar.zst*) arch=x86_64 ;;
+              *-aarch64.pkg.tar.zst*) arch=aarch64 ;;
+              *) continue ;;
+            esac
+            mkdir -p "public/pacman/$arch"
+            mv "$file" "public/pacman/$arch/"
+          done
+          rm -rf public/pacman/pool
+
+      - name: Generate pacman repository metadata
+        if: steps.key.outputs.available == 'true'
+        run: |
+          for arch in x86_64 aarch64; do
+            dir="public/pacman/$arch"
+            [ -d "$dir" ] || continue
+            shopt -s nullglob
+            pkgs=("$dir"/*.pkg.tar.zst)
+            shopt -u nullglob
+            [ "${#pkgs[@]}" -gt 0 ] || continue
+
+            echo "Generating pacman repository for $arch"
+            # repo-add runs without --sign: the release key is passphrase
+            # protected and repo-add cannot feed gpg a passphrase, so the
+            # metadata is signed on the runner right after this step.
+            docker run --rm \
+              --volume "$PWD/$dir:/repo" \
+              --workdir /repo \
+              archlinux:latest \
+              bash -c 'repo-add eleos.db.tar.gz ./*.pkg.tar.zst'
+          done
 
       - name: Generate repository metadata
         if: steps.key.outputs.available == 'true'
@@ -121,7 +201,8 @@ jobs:
           APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           cd public
-          export GNUPGHOME="$(mktemp -d)"
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
           printf '%s' "$APT_GPG_PRIVATE_KEY" | gpg --batch --quiet --import
 
           GPG_OPTS=(--batch --yes --pinentry-mode loopback)
@@ -138,15 +219,37 @@ jobs:
             -o dists/stable/Release.gpg dists/stable/Release
           gpg --armor --export "$keyid" > eleos-archive-keyring.asc
 
+          # pacman repository metadata and packages use the same signing key.
+          mkdir -p pacman
+          gpg --armor --export "$keyid" > pacman/eleos-archive-keyring.asc
+
+          shopt -s nullglob
+          for pkg in pacman/*/*.pkg.tar.zst; do
+            [ -e "$pkg.sig" ] || gpg "${GPG_OPTS[@]}" --detach-sign -o "$pkg.sig" "$pkg"
+          done
+
+          for arch in x86_64 aarch64; do
+            [ -d "pacman/$arch" ] || continue
+            for db in eleos.db eleos.db.tar.gz eleos.files eleos.files.tar.gz; do
+              [ -e "pacman/$arch/$db" ] || continue
+              gpg "${GPG_OPTS[@]}" --detach-sign \
+                -o "pacman/$arch/$db.sig" "pacman/$arch/$db"
+            done
+          done
+
+          echo "ELEOS_KEY_FPR=$keyid" >> "$GITHUB_ENV"
+
       - name: Write index page
         if: steps.key.outputs.available == 'true'
         run: |
           cat > public/index.html <<'HTML'
           <!doctype html>
           <html lang="en">
-          <head><meta charset="utf-8"><title>eleos apt repository</title></head>
+          <head><meta charset="utf-8"><title>eleos package repositories</title></head>
           <body>
-          <h1>eleos apt repository</h1>
+          <h1>eleos package repositories</h1>
+
+          <h2>APT (Debian, Ubuntu, ...)</h2>
           <pre>
           curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
             | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
@@ -155,10 +258,29 @@ jobs:
           sudo apt update
           sudo apt install eleos
           </pre>
+
+          <h2>pacman (Arch Linux)</h2>
+          <pre>
+          curl -fsSL https://nexryai.github.io/eleos/pacman/eleos-archive-keyring.asc \
+            -o /tmp/eleos-archive-keyring.asc
+          sudo pacman-key --add /tmp/eleos-archive-keyring.asc
+          sudo pacman-key --lsign-key __FPR__
+
+          sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+          [eleos]
+          SigLevel = Required DatabaseRequired
+          Server = https://nexryai.github.io/eleos/pacman/$arch
+          EOF
+
+          sudo pacman -Syu
+          sudo pacman -S eleos
+          </pre>
+
           <p><a href="https://github.com/nexryai/eleos">nexryai/eleos</a></p>
           </body>
           </html>
           HTML
+          sed -i "s/__FPR__/${ELEOS_KEY_FPR}/" public/index.html
 
       - name: Setup Pages
         if: steps.key.outputs.available == 'true'
