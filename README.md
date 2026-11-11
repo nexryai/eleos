@@ -28,7 +28,7 @@ Note: disable any existing firewall before using this.
    <img width="200px" height="auto" alt="Get it from the Snap Store" src=https://snapcraft.io/en/dark/install.svg />
 </a>
 
-<br>
+　  
 
 
 This snap runs strictly confined. The privileged firewall-control interface has to be connected manually before rules can be applied:
