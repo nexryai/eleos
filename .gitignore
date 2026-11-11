@@ -8,3 +8,5 @@ stage/
 prime/
 .craft/
 .idea/
+/public/
+/dist/

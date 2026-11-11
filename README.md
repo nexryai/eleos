@@ -68,6 +68,26 @@ sudo elctl enable
 sudo systemctl enable eleos
 ```
 
+### Install from the APT repository
+Packages for Debian-based distributions are served from GitHub Pages:
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/eleos-archive-keyring.gpg] https://nexryai.github.io/eleos/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/eleos.list
+
+sudo apt update
+sudo apt install eleos
+
+# Edit the rules
+sudo nano /etc/eleos.yml
+
+sudo elctl enable
+sudo systemctl enable eleos
+```
+
 #### Install from source
 ```sh
 # Build

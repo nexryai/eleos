@@ -31,6 +31,12 @@ jobs:
           GOOS=linux GOARCH=ppc64le CGO_ENABLED=0 go build -o elctl-ppc64le main.go
           GOOS=linux GOARCH=s390x CGO_ENABLED=0 go build -o elctl-s390x main.go
 
+      - name: Build Debian packages
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          packaging/deb/build-deb.sh amd64 elctl-amd64 "$version" dist
+          packaging/deb/build-deb.sh arm64 elctl-arm64 "$version" dist
+
       - name: Compress with zip
         run: |
           for arch in amd64 arm arm64 mips mips64 riscv64 ppc64 ppc64le s390x; do
@@ -44,4 +50,127 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "eleos $GITHUB_REF_NAME" \
             --generate-notes \
-            eleos-linux-*.zip
+            eleos-linux-*.zip dist/*.deb
+
+  apt:
+    name: Publish APT repository
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check signing key
+        id: key
+        env:
+          KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::APT_GPG_PRIVATE_KEY is not configured; skipping the APT repository deployment"
+          fi
+
+      - name: Install tools
+        if: steps.key.outputs.available == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils dpkg-dev gnupg
+
+      - name: Collect packages
+        if: steps.key.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p public/pool/main/e/eleos
+          for tag in $(gh release list --limit 100 --json tagName -q '.[].tagName'); do
+            gh release download "$tag" --pattern '*.deb' \
+              --dir public/pool/main/e/eleos || true
+          done
+          ls -l public/pool/main/e/eleos
+
+      - name: Generate repository metadata
+        if: steps.key.outputs.available == 'true'
+        run: |
+          cd public
+          for arch in amd64 arm64; do
+            mkdir -p "dists/stable/main/binary-$arch"
+            dpkg-scanpackages --multiversion --arch "$arch" pool /dev/null \
+              > "dists/stable/main/binary-$arch/Packages"
+            gzip -9c "dists/stable/main/binary-$arch/Packages" \
+              > "dists/stable/main/binary-$arch/Packages.gz"
+          done
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin=eleos \
+            -o APT::FTPArchive::Release::Label=eleos \
+            -o APT::FTPArchive::Release::Suite=stable \
+            -o APT::FTPArchive::Release::Codename=stable \
+            -o APT::FTPArchive::Release::Architectures="amd64 arm64" \
+            -o APT::FTPArchive::Release::Components=main \
+            release dists/stable > dists/stable/Release
+
+      - name: Sign repository
+        if: steps.key.outputs.available == 'true'
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: |
+          cd public
+          export GNUPGHOME="$(mktemp -d)"
+          printf '%s' "$APT_GPG_PRIVATE_KEY" | gpg --batch --quiet --import
+
+          GPG_OPTS=(--batch --yes --pinentry-mode loopback)
+          if [ -n "${APT_GPG_PASSPHRASE:-}" ]; then
+            GPG_OPTS+=(--passphrase "$APT_GPG_PASSPHRASE")
+          fi
+
+          keyid=$(gpg --list-secret-keys --with-colons |
+            awk -F: '/^fpr:/{print $10; exit}')
+
+          gpg "${GPG_OPTS[@]}" --clearsign \
+            -o dists/stable/InRelease dists/stable/Release
+          gpg "${GPG_OPTS[@]}" --armor --detach-sign \
+            -o dists/stable/Release.gpg dists/stable/Release
+          gpg --armor --export "$keyid" > eleos-archive-keyring.asc
+
+      - name: Write index page
+        if: steps.key.outputs.available == 'true'
+        run: |
+          cat > public/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head><meta charset="utf-8"><title>eleos APT repository</title></head>
+          <body>
+          <h1>eleos APT repository</h1>
+          <pre>
+          curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
+            | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/eleos-archive-keyring.gpg] https://nexryai.github.io/eleos/ stable main" \
+            | sudo tee /etc/apt/sources.list.d/eleos.list
+          sudo apt update
+          sudo apt install eleos
+          </pre>
+          <p><a href="https://github.com/nexryai/eleos">nexryai/eleos</a></p>
+          </body>
+          </html>
+          HTML
+
+      - name: Setup Pages
+        if: steps.key.outputs.available == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: steps.key.outputs.available == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        if: steps.key.outputs.available == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
