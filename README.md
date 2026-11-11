@@ -24,7 +24,9 @@ set up a simple home router!
 Note: disable any existing firewall before using this.
 
 #### Install with snap
-[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/eleos)
+<a href="https://snapcraft.io/eleos">
+   <img width="200px" height="auto" alt="Get it from the Snap Store" src=https://snapcraft.io/en/dark/install.svg />
+</a>
 
 #### Install from dnf repositories
 If you are using one of the following distributions, you can install it from the [Official Copr](https://copr.fedorainfracloud.org/coprs/nexryai/eleos/).
