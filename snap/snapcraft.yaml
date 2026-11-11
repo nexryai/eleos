@@ -4,11 +4,9 @@ base: core24
 # Derive the version from git: tags give the release version, commits on
 # main give a unique version for edge builds.
 version: git
-summary: Lightweight nftables firewall that operates via netlink
+summary: Yet another human-friendly firewall
 description: |
-  eleos is a lightweight, simple, secure and essential firewall that
-  manipulates nftables directly through netlink. It does not depend on the
-  nft(8) command and needs no external API access to generate or apply rules.
+  eleos is a lightweight, simple, secure and essential firewall.
 
   This snap runs strictly confined. The privileged firewall-control
   interface has to be connected manually before rules can be applied:
