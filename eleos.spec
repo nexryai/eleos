@@ -1,7 +1,7 @@
 # COPR builds this spec through the SCM "make srpm" method
 # (see .copr/Makefile).
 Name:           eleos
-Version:        0.8.4
+Version:        0.8.5
 Release:        1%{?dist}
 Summary:        Lightweight nftables firewall that operates via netlink
 
@@ -94,6 +94,9 @@ fi
 %config(noreplace) %{_sysconfdir}/eleos.yml
 
 %changelog
+* Wed Nov 11 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.5-1
+- Publish a signed APT repository on GitHub Pages
+
 * Mon Nov 09 2026 nexryai <nexryai@users.noreply.github.com> - 0.8.4-1
 - Update README and default configuration
 
