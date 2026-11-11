@@ -9,8 +9,6 @@ Under development.
 
 #### Simple and easy to use
 All configuration is managed in YAML. No more hammering `ufw status`!
-It also runs as a single binary and does not depend on the `nft` command,
-so installation is easy.
 
 #### Secure
 It warns about unsafe settings. It is written in memory-safe Go.
@@ -22,12 +20,25 @@ arbitrary IP addresses.
 Want to build your own router? eleos includes features to help you
 set up a simple home router!
 
-#### Fully offline operation
-No external API communication is required, so rules can be generated and
-applied entirely offline.
-
 ### Usage
 Note: disable any existing firewall before using this.
+
+#### Install with snap
+[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/eleos)
+
+#### Install from dnf repositories
+If you are using one of the following distributions, you can install it from the [Official Copr](https://copr.fedorainfracloud.org/coprs/nexryai/eleos/).
+
+ - Fedora
+ - RHEL
+ - Alma Linux
+ - Rocky Linux
+ - CentOS Stream
+ - Amazon Linux
+ - Azure Linux
+ - openEuler
+ - openSUSE
+
 
 #### Install from source
 ```sh
