@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.8.6)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,8 +17,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -33,7 +43,7 @@ jobs:
 
       - name: Build Debian packages
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_TAG#v}"
           packaging/deb/build-deb.sh amd64 elctl-amd64 "$version" dist
           packaging/deb/build-deb.sh arm64 elctl-arm64 "$version" dist
 
@@ -47,10 +57,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "eleos $GITHUB_REF_NAME" \
-            --generate-notes \
-            eleos-linux-*.zip dist/*.deb
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" \
+              eleos-linux-*.zip dist/*.deb --clobber
+          else
+            gh release create "$RELEASE_TAG" \
+              --title "eleos $RELEASE_TAG" \
+              --generate-notes \
+              eleos-linux-*.zip dist/*.deb
+          fi
 
   arch:
     name: Build Arch package (${{ matrix.arch }})
@@ -58,6 +73,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
     strategy:
       fail-fast: false
       matrix:
@@ -66,10 +83,12 @@ jobs:
           - aarch64
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
       - name: Build package
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_TAG#v}"
           docker run --rm \
             --volume "$PWD:/work" \
             --workdir /work \
@@ -82,13 +101,15 @@ jobs:
         run: |
           shopt -s nullglob
           assets=(dist/*.pkg.tar.zst)
-          gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+          gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
 
   packaging:
     name: Update packaging metadata
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
     steps:
       - name: Check out main
         uses: actions/checkout@v4
@@ -97,11 +118,9 @@ jobs:
           fetch-depth: 0
 
       - name: Update PKGBUILD, .SRCINFO and spec
-        env:
-          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          tag="${TAG#v}"
+          tag="${RELEASE_TAG#v}"
           pkgver="${tag//-/_}"
           url="https://github.com/nexryai/eleos/archive/refs/tags/v${tag}.tar.gz"
 
@@ -144,7 +163,7 @@ jobs:
             echo "packaging metadata is already up to date"
             exit 0
           fi
-          git commit -m "chore: update packaging for ${GITHUB_REF_NAME} [skip ci]"
+          git commit -m "chore: update packaging for ${RELEASE_TAG} [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main
 

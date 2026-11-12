@@ -6,12 +6,18 @@ on:
       - main
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v0.8.6)'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: snap-${{ github.ref }}
+  group: snap-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -30,13 +36,15 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
         with:
+          # For manual runs, build the requested tag.
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
           # Required for `version: git` in snapcraft.yaml.
           fetch-depth: 0
 
       - name: Select channel
         id: channel
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+          if [[ "${GITHUB_REF}" == refs/tags/v* || "${{ github.event_name }}" == workflow_dispatch ]]; then
             echo "channel=stable" >> "$GITHUB_OUTPUT"
           else
             echo "channel=edge" >> "$GITHUB_OUTPUT"
