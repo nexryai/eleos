@@ -1,0 +1,16 @@
+pkgbase = eleos
+	pkgdesc = Lightweight nftables firewall configured with YAML and applied over netlink
+	pkgver = 0.8.5
+	pkgrel = 1
+	url = https://github.com/nexryai/eleos
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = go
+	options = !strip
+	options = !debug
+	backup = etc/eleos.yml
+	source = eleos-0.8.5.tar.gz::https://github.com/nexryai/eleos/archive/refs/tags/v0.8.5.tar.gz
+	sha256sums = 3ccdcf65d5c55f5cc6a11b4e923bd74cd6a2058ba50c8719977517f4148663e0
+
+pkgname = eleos

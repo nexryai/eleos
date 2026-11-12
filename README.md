@@ -88,6 +88,37 @@ sudo elctl enable
 sudo systemctl enable eleos
 ```
 
+### Install from the pacman repository (Arch Linux)
+
+Packages for `x86_64` and `aarch64` are published to a signed pacman
+repository on GitHub Pages. Import the repository key (the same key used for
+the APT repository), then add the repository:
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/pacman/eleos-archive-keyring.asc \
+  -o /tmp/eleos-archive-keyring.asc
+sudo pacman-key --add /tmp/eleos-archive-keyring.asc
+sudo pacman-key --lsign-key 4795EA54BDDDEAA6C8145A1EB482297ABFCE2726
+
+sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+[eleos]
+SigLevel = Required DatabaseRequired
+Server = https://nexryai.github.io/eleos/pacman/$arch
+EOF
+
+sudo pacman -Syu
+sudo pacman -S eleos
+
+# Edit the rules
+sudo nano /etc/eleos.yml
+
+sudo elctl enable
+sudo systemctl enable eleos
+```
+
+If the repository key is ever rotated, the current fingerprint is printed on
+the [repository page](https://nexryai.github.io/eleos/).
+
 #### Install from source
 ```sh
 # Build
