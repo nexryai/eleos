@@ -5,8 +5,37 @@ Before=network-pre.target
 
 [Service]
 Type=oneshot
-ProtectSystem=true
-ProtectHome=true
+# elctl only talks to nftables over netlink, so CAP_NET_ADMIN is the only
+# capability it needs. Everything else the unit would otherwise inherit as root
+# (CAP_SYS_ADMIN, CAP_SYS_MODULE, CAP_SYS_PTRACE, ...) is dropped.
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=yes
+# The unit reads /etc/eleos.yml and never writes files.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectKernelModules=yes
+# net.ipv4.ip_forward is only read (router mode warns when it is 0), and a
+# read-only /proc/sys still allows reads, so writes can stay blocked.
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+# netlink is required to program nftables; AF_UNIX keeps sd_notify/logging usable.
+RestrictAddressFamilies=AF_NETLINK AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+UMask=0077
+# The service has no business sending or receiving IP traffic itself.
+IPAddressDeny=any
 ExecStart=/usr/bin/elctl enable
 ExecReload=/usr/bin/elctl apply
 ExecStop=/usr/bin/elctl disable
