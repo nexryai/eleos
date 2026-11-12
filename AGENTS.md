@@ -10,5 +10,5 @@
 
 ## Releasing
 
-- Before tagging `v<version>`, run `packaging/arch/update-pkgbuild.sh <version>` and commit the updated `packaging/arch/PKGBUILD` and `.SRCINFO`. The release workflow builds its own tag-pinned copy, but the checked-in files are what AUR clients (`paru`, `yay`) and other `.SRCINFO` consumers read.
+- After pushing the `v<version>` tag (the script downloads that tarball), run `packaging/arch/update-pkgbuild.sh <version>` and commit the updated `packaging/arch/PKGBUILD` and `.SRCINFO`. The release workflow builds its own tag-pinned copy, but the checked-in files are what AUR clients (`paru`, `yay`) and other `.SRCINFO` consumers read. A tag with a hyphen (`v0.61-fix3`) is published as `pkgver=0.61_fix3`, because makepkg rejects hyphens in `pkgver`.
 - The `release` workflow builds Arch packages for `x86_64` and `aarch64`, attaches them to the GitHub Release, and republishes the signed pacman repository on GitHub Pages next to the APT repository.

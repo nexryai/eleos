@@ -8,7 +8,7 @@
 # and makepkg is told the target CARCH).
 #
 # Usage: packaging/arch/build.sh <version> <arch> [output-dir]
-#   version     release version without the leading "v" (e.g. 0.8.5)
+#   version     release tag without the leading "v" (e.g. 0.8.5, 0.61-fix3)
 #   arch        x86_64 or aarch64
 #   output-dir  directory for the .pkg.tar.zst (default: dist)
 set -euo pipefail
@@ -20,18 +20,23 @@ usage() {
 
 [[ $# -ge 2 && $# -le 3 ]] || usage
 
-version="${1#v}"
+tag="${1#v}"
 arch="$2"
 outdir="${3:-dist}"
 
-case "$version" in
+case "$tag" in
 	[0-9]*) ;;
-	*) echo "invalid version: $version" >&2; exit 2 ;;
+	*) echo "invalid version: $tag" >&2; exit 2 ;;
 esac
 case "$arch" in
 	x86_64 | aarch64) ;;
 	*) echo "unsupported arch: $arch" >&2; exit 2 ;;
 esac
+
+# makepkg rejects a pkgver with hyphens, but release tags do contain them
+# (v0.61-fix3). Keep the tag for the download URL and use a normalised version
+# in the PKGBUILD, so every tag the workflow triggers on still builds.
+pkgver="${tag//-/_}"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 pkgname=eleos
@@ -49,19 +54,21 @@ outdir="$(cd "$outdir" && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-url="https://github.com/nexryai/eleos/archive/refs/tags/v${version}.tar.gz"
-tarball="$work/${pkgname}-${version}.tar.gz"
-echo "Downloading $url"
-curl -fsSL --retry 3 "$url" -o "$tarball"
+repo_url="https://github.com/nexryai/eleos"
+src_url="$repo_url/archive/refs/tags/v${tag}.tar.gz"
+tarball="$work/${pkgname}-${pkgver}.tar.gz"
+echo "Downloading $src_url"
+curl -fsSL --retry 3 "$src_url" -o "$tarball"
 sha="$(sha256sum "$tarball" | cut -d' ' -f1)"
 
 # Pin a copy of the PKGBUILD to the exact tag being released. The checked-in
 # PKGBUILD is kept in sync by update-pkgbuild.sh for users, but the release
 # must not depend on that manual bump having happened.
 sed -E \
-	-e "s/^pkgver=.*/pkgver=${version}/" \
+	-e "s/^pkgver=.*/pkgver=${pkgver}/" \
 	-e "s/^pkgrel=.*/pkgrel=1/" \
 	-e "s/^sha256sums=.*/sha256sums=('${sha}')/" \
+	-e "s|^source=.*|source=(\"$pkgname-$pkgver.tar.gz::$src_url\")|" \
 	"$script_dir/PKGBUILD" >"$work/PKGBUILD"
 
 cross=false
@@ -105,7 +112,7 @@ else
 fi
 
 shopt -s nullglob
-packages=("$outdir"/"${pkgname}-${version}"-*.pkg.tar.zst)
+packages=("$outdir"/"${pkgname}-${pkgver}"-*.pkg.tar.zst)
 shopt -u nullglob
 if [[ ${#packages[@]} -eq 0 ]]; then
 	echo "makepkg produced no package in $outdir" >&2
