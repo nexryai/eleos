@@ -226,6 +226,9 @@ jobs:
       - release
       - arch
     runs-on: ubuntu-24.04
+    # No checkout here, so gh cannot infer the repository without GH_REPO.
+    env:
+      GH_REPO: ${{ github.repository }}
     permissions:
       contents: read
       pages: write
@@ -258,7 +261,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p public/pool/main/e/eleos
-          for tag in $(gh release list --limit 100 --json tagName -q '.[].tagName'); do
+          tags=$(gh release list --limit 100 --json tagName -q '.[].tagName')
+          for tag in $tags; do
             gh release download "$tag" --pattern '*.deb' \
               --dir public/pool/main/e/eleos || true
           done
@@ -270,7 +274,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p public/pacman/pool
-          for tag in $(gh release list --limit 100 --json tagName -q '.[].tagName'); do
+          tags=$(gh release list --limit 100 --json tagName -q '.[].tagName')
+          for tag in $tags; do
             gh release download "$tag" \
               --pattern '*.pkg.tar.zst' \
               --pattern '*.pkg.tar.zst.sig' \
@@ -417,6 +422,23 @@ jobs:
           </html>
           HTML
           sed -i "s/__FPR__/${ELEOS_KEY_FPR}/" public/index.html
+
+      - name: Verify packages were collected
+        if: steps.key.outputs.available == 'true'
+        run: |
+          shopt -s nullglob
+          debs=(public/pool/main/e/eleos/*.deb)
+          pkgs=(public/pacman/*/*.pkg.tar.zst)
+          echo "APT packages: ${#debs[@]}"
+          echo "pacman packages: ${#pkgs[@]}"
+          [ "${#debs[@]}" -gt 0 ] || { echo "::error::no .deb packages were collected from the release assets"; exit 1; }
+          [ "${#pkgs[@]}" -gt 0 ] || { echo "::error::no pacman packages were collected from the release assets"; exit 1; }
+          for arch in x86_64 aarch64; do
+            [ -s "public/pacman/${arch}/eleos.db" ] || { echo "::error::pacman database for ${arch} is missing"; exit 1; }
+          done
+          for arch in amd64 arm64; do
+            [ -s "public/dists/stable/main/binary-${arch}/Packages" ] || { echo "::error::APT Packages index for ${arch} is empty"; exit 1; }
+          done
 
       - name: Setup Pages
         if: steps.key.outputs.available == 'true'
