@@ -153,19 +153,72 @@ jobs:
           # derive the real version from the tag in .copr/Makefile.
           sed -E -i "s/^Version:.*/Version:        ${pkgver}/" eleos.spec
 
-      - name: Commit and push
+      - name: Commit metadata as a signed commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packaging/arch/PKGBUILD packaging/arch/.SRCINFO eleos.spec
-          if git diff --cached --quiet; then
+
+          if git diff --quiet -- packaging/arch/PKGBUILD packaging/arch/.SRCINFO eleos.spec; then
             echo "packaging metadata is already up to date"
             exit 0
           fi
-          git commit -m "chore: update packaging for ${RELEASE_TAG} [skip ci]"
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          pkgbuild=$(base64 -w0 packaging/arch/PKGBUILD)
+          srcinfo=$(base64 -w0 packaging/arch/.SRCINFO)
+          spec=$(base64 -w0 eleos.spec)
+
+          # createCommitOnBranch creates a commit signed by GitHub, which is
+          # required because main requires signed commits.
+          for attempt in 1 2 3; do
+            git fetch --quiet origin main
+            head=$(git rev-parse origin/main)
+
+            payload=$(jq -n \
+              --arg repo "$GITHUB_REPOSITORY" \
+              --arg branch "main" \
+              --arg headline "chore: update packaging for ${RELEASE_TAG} [skip ci]" \
+              --arg head "$head" \
+              --arg pkgbuild "$pkgbuild" \
+              --arg srcinfo "$srcinfo" \
+              --arg spec "$spec" \
+              '{
+                query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid url } } }",
+                variables: {
+                  input: {
+                    branch: {repositoryNameWithOwner: $repo, branchName: $branch},
+                    message: {headline: $headline},
+                    fileChanges: {
+                      additions: [
+                        {path: "packaging/arch/PKGBUILD", contents: $pkgbuild},
+                        {path: "packaging/arch/.SRCINFO", contents: $srcinfo},
+                        {path: "eleos.spec", contents: $spec}
+                      ]
+                    },
+                    expectedHeadOid: $head
+                  }
+                }
+              }')
+
+            response=$(curl -sS \
+              -H "Authorization: bearer ${GH_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "$payload" \
+              https://api.github.com/graphql)
+
+            if echo "$response" | jq -e '.data.createCommitOnBranch.commit.oid' >/dev/null 2>&1; then
+              echo "Created signed commit: $(echo "$response" | jq -r '.data.createCommitOnBranch.commit.oid')"
+              echo "$response" | jq -r '.data.createCommitOnBranch.commit.url'
+              exit 0
+            fi
+
+            echo "Attempt ${attempt} failed:"
+            echo "$response" | jq .
+            sleep 5
+          done
+
+          echo "Failed to create a signed commit" >&2
+          exit 1
 
   apt:
     name: Publish package repositories

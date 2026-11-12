@@ -14,7 +14,8 @@
   `.deb` packages and Arch packages, publishes the APT and pacman repositories
   on GitHub Pages, and commits the updated `packaging/arch/PKGBUILD`,
   `packaging/arch/.SRCINFO` and `eleos.spec` back to `main` (with `[skip ci]`).
-  No local packaging script needs to be run.
+  No local packaging script needs to be run. The metadata commit is created
+  through the GitHub GraphQL API so it is signed (main requires signed commits).
 - COPR derives the RPM version from the checked-out tag in `.copr/Makefile`;
   branch builds fall back to the `Version` committed in `eleos.spec`.
 - The snap version comes from `version: git` in `snap/snapcraft.yaml`.
