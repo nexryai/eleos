@@ -84,6 +84,70 @@ jobs:
           assets=(dist/*.pkg.tar.zst)
           gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
 
+  packaging:
+    name: Update packaging metadata
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update PKGBUILD, .SRCINFO and spec
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag="${TAG#v}"
+          pkgver="${tag//-/_}"
+          url="https://github.com/nexryai/eleos/archive/refs/tags/v${tag}.tar.gz"
+
+          tmp="$(mktemp)"
+          curl -fsSL --retry 3 "$url" -o "$tmp"
+          sha="$(sha256sum "$tmp" | cut -d' ' -f1)"
+          rm -f "$tmp"
+
+          sed -E -i \
+            -e "s/^pkgver=.*/pkgver=${pkgver}/" \
+            -e "s/^pkgrel=.*/pkgrel=1/" \
+            -e "s/^sha256sums=.*/sha256sums=('${sha}')/" \
+            -e "s|^source=.*|source=(\"eleos-${pkgver}.tar.gz::${url}\")|" \
+            packaging/arch/PKGBUILD
+
+          docker run --rm \
+            --volume "$PWD/packaging/arch:/src:ro" \
+            archlinux:latest \
+            bash -c '
+              set -e
+              id -u builder >/dev/null 2>&1 || useradd -m builder
+              mkdir -p /home/builder/pkg
+              cp /src/PKGBUILD /home/builder/pkg/
+              chown -R builder /home/builder/pkg
+              cd /home/builder/pkg
+              runuser -u builder -- makepkg --printsrcinfo
+            ' > packaging/arch/.SRCINFO
+
+          # Keep the fallback version in the spec in sync. COPR tag builds
+          # derive the real version from the tag in .copr/Makefile.
+          sed -E -i "s/^Version:.*/Version:        ${pkgver}/" eleos.spec
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packaging/arch/PKGBUILD packaging/arch/.SRCINFO eleos.spec
+          if git diff --cached --quiet; then
+            echo "packaging metadata is already up to date"
+            exit 0
+          fi
+          git commit -m "chore: update packaging for ${GITHUB_REF_NAME} [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
   apt:
     name: Publish package repositories
     needs:

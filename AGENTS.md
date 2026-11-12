@@ -10,5 +10,13 @@
 
 ## Releasing
 
-- After pushing the `v<version>` tag (the script downloads that tarball), run `packaging/arch/update-pkgbuild.sh <version>` and commit the updated `packaging/arch/PKGBUILD` and `.SRCINFO`. The release workflow builds its own tag-pinned copy, but the checked-in files are what AUR clients (`paru`, `yay`) and other `.SRCINFO` consumers read. A tag with a hyphen (`v0.61-fix3`) is published as `pkgver=0.61_fix3`, because makepkg rejects hyphens in `pkgver`.
-- The `release` workflow builds Arch packages for `x86_64` and `aarch64`, attaches them to the GitHub Release, and republishes the signed pacman repository on GitHub Pages next to the APT repository.
+- Push a `v<version>` tag. The `release` workflow builds the binary archives,
+  `.deb` packages and Arch packages, publishes the APT and pacman repositories
+  on GitHub Pages, and commits the updated `packaging/arch/PKGBUILD`,
+  `packaging/arch/.SRCINFO` and `eleos.spec` back to `main` (with `[skip ci]`).
+  No local packaging script needs to be run.
+- COPR derives the RPM version from the checked-out tag in `.copr/Makefile`;
+  branch builds fall back to the `Version` committed in `eleos.spec`.
+- The snap version comes from `version: git` in `snap/snapcraft.yaml`.
+- A tag with a hyphen (`v0.61-fix3`) is published as `pkgver=0.61_fix3`,
+  because makepkg rejects hyphens in `pkgver`.
