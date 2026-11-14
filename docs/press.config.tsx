@@ -9,9 +9,17 @@ export default createPress(
     name: "docs",
   },
   ui: {
+    layoutProps: {
+      githubUrl: "https://github.com/nexryai/eleos",
+    },
     renderPage(props) {
       if (props.type === "docs") {
-        return props.renderDefault({ layout: "notebook" });
+        return props.renderDefault({
+          layout: "notebook",
+          layoutProps: {
+            nav: { mode: "top" },
+          },
+        });
       }
       return props.renderDefault();
     },
