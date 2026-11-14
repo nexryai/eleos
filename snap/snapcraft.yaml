@@ -51,6 +51,11 @@ apps:
     plugs:
       - firewall-control
 
+hooks:
+  remove:
+    plugs:
+      - firewall-control
+
 parts:
   eleos:
     # Use the nil plugin and build manually: the go plugin validates the
