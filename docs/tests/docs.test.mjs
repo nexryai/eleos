@@ -73,3 +73,22 @@ test("generated navigation and search indexes stay within their language", async
     }
   }
 });
+
+test("each fenced example renders one highlighted code block and copy button", async () => {
+  for (const locale of locales) {
+    for (const page of pages) {
+      const source = await read(`content/${locale}/${page}.mdx`);
+      const html = await read(htmlPath(locale, page));
+      const figures = [...html.matchAll(/<figure\b[^>]*>[\s\S]*?<\/figure>/g)].map(([figure]) => figure);
+      assert.equal(figures.length, codeBlocks(source).length, `${locale}/${page}: duplicate or missing code block`);
+      for (const figure of figures) {
+        assert.equal((figure.match(/<figure\b/g) ?? []).length, 1, `${locale}/${page}: nested code block`);
+        assert.equal((figure.match(/<pre\b/g) ?? []).length, 1, `${locale}/${page}: nested pre`);
+        assert.equal((figure.match(/<code\b/g) ?? []).length, 1, `${locale}/${page}: missing code element`);
+        assert.equal((figure.match(/<button\b/g) ?? []).length, 1, `${locale}/${page}: duplicate copy button`);
+        assert.ok(figure.includes("--shiki-light:"), `${locale}/${page}: missing syntax highlighting`);
+        assert.match(figure, /<span class="line">/);
+      }
+    }
+  }
+});

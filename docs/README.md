@@ -30,6 +30,10 @@ together when the implementation changes.
 Astro integration uses APIs removed in 16.19.0. Upgrade the integration and both
 packages together, then check the generated pages.
 
+`src/markdown.mjs` preserves fenced code as `pre > code` to work around the
+installed integration's code-tag renaming on Satteri. Astro's highlighter is
+disabled so Fumadocs handles syntax highlighting and the copy-button wrapper.
+
 ## Checks
 
 ```sh
