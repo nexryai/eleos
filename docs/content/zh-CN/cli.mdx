@@ -83,3 +83,5 @@ CGO_ENABLED=0 go test ./...
 ```
 
 单元测试覆盖地址处理和规则构建。`integration/` 中的测试需要 `integration` 构建标签、root 权限、已构建的二进制，以及网络命名空间/nftables 工具。请仅在隔离测试环境运行；所需环境见仓库的集成测试和 CI 工作流。
+
+集成测试 CI 还在一次性 Ubuntu VM 中验证 systemd 和严格限制模式的 Snap 服务生命周期。运行时必须显式设置 `ELEOS_SERVICE_TEST=systemd` 或 `ELEOS_SERVICE_TEST=snap`，测试会修改 VM 的服务和防火墙。环境要求、测试范围和本地命令见仓库中的 `integration/README.md`。

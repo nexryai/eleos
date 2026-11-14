@@ -20,6 +20,12 @@ arbitrary IP addresses.
 Want to build your own router? eleos includes features to help you
 set up a simple home router!
 
+## Testing
+
+CI tests nftables traffic in network namespaces and the systemd/Snap service
+lifecycles on disposable Ubuntu VMs. See [integration tests](integration/README.md)
+for prerequisites, coverage and local commands.
+
 ## Usage
 > [!CAUTION]
 > disable any existing firewall before using this.

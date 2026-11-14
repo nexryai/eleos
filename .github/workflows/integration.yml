@@ -1,4 +1,4 @@
-name: Nftables Integration Test
+name: Integration Tests
 
 on:
   pull_request:
@@ -9,6 +9,9 @@ on:
     branches:
       - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   integration:
@@ -39,3 +42,44 @@ jobs:
         env:
           ELCTL_BIN: ${{ github.workspace }}/elctl
         run: go test -tags integration -v -count=1 -timeout 10m ./integration/...
+
+  systemd:
+    name: Native systemd service
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install test dependencies
+        run: sudo apt-get update && sudo apt-get install -y nftables
+      - name: Build binary and integration tests
+        run: |
+          CGO_ENABLED=0 go build -o elctl .
+          CGO_ENABLED=0 go test -tags integration -c -o integration.test ./integration
+      - name: Test installed systemd service
+        run: sudo env ELEOS_SERVICE_TEST=systemd ELCTL_BIN="$GITHUB_WORKSPACE/elctl" ./integration.test -test.run '^TestSystemdService$' -test.v -test.timeout 10m
+
+  snap:
+    name: Strictly confined Snap
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install test dependencies
+        run: sudo apt-get update && sudo apt-get install -y nftables snapd
+      - name: Build snap
+        id: build
+        uses: snapcore/action-build@v1
+      - name: Build integration tests
+        run: CGO_ENABLED=0 go test -tags integration -c -o integration.test ./integration
+      - name: Test installed Snap
+        env:
+          ELEOS_SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: sudo env ELEOS_SERVICE_TEST=snap ELEOS_SNAP_FILE="$ELEOS_SNAP_FILE" ./integration.test -test.run '^TestSnapService$' -test.v -test.timeout 15m

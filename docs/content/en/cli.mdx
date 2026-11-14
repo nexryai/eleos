@@ -83,3 +83,5 @@ CGO_ENABLED=0 go test ./...
 ```
 
 Unit tests cover address handling and rule construction. Tests under `integration/` require the `integration` build tag, root privileges, a built binary and tools for network namespaces/nftables. Run them only in an isolated test environment; see the repository's integration tests and CI workflow for the required setup.
+
+The integration CI also runs systemd and strictly confined Snap service lifecycle tests on disposable Ubuntu VMs. These require explicit `ELEOS_SERVICE_TEST=systemd` or `ELEOS_SERVICE_TEST=snap` opt-in and modify the VM's installed services and firewall. See `integration/README.md` in the repository for prerequisites, coverage and local commands.

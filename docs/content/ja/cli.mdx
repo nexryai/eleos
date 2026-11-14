@@ -83,3 +83,5 @@ CGO_ENABLED=0 go test ./...
 ```
 
 ユニットテストはアドレス処理とルール構築を検証します。`integration/` のテストには `integration` ビルドタグ、root 権限、ビルド済みバイナリ、ネットワーク名前空間や nftables のツールが必要です。隔離したテスト環境でのみ実行し、必要な構成はリポジトリの統合テストと CI ワークフローを確認してください。
+
+統合テスト CI では、使い捨ての Ubuntu VM 上で systemd と strict confinement の Snap のサービス操作も検証します。実行には `ELEOS_SERVICE_TEST=systemd` または `ELEOS_SERVICE_TEST=snap` の明示指定が必要で、VM のサービスとファイアウォールを変更します。必要な環境、検証範囲、実行コマンドはリポジトリの `integration/README.md` を参照してください。
