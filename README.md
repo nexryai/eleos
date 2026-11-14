@@ -116,8 +116,8 @@ sudo elctl enable
 sudo systemctl enable eleos
 ```
 
-If the repository key is ever rotated, the current fingerprint is printed on
-the [repository page](https://nexryai.github.io/eleos/).
+If the repository key is ever rotated, check the published
+[signing-key fingerprint](https://nexryai.github.io/eleos/eleos-archive-keyring.fingerprint).
 
 #### Install from source
 ```sh

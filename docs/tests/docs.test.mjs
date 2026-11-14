@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const locales = ["en", "ja", "zh-CN"];
@@ -9,6 +9,9 @@ const pages = [
 ];
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const url = (locale, page) => `/${locale}${page === "index" ? "" : `/${page}`}`;
+const base = (process.env.DOCS_BASE_PATH ?? "").replace(/\/$/, "");
+const site = process.env.DOCS_SITE_URL?.replace(/\/$/, "") ?? "";
+const servedUrl = (locale, page) => `${base}${url(locale, page)}`;
 const htmlPath = (locale, page) => `dist${url(locale, page)}/index.html`;
 const codeBlocks = (text) => [...text.matchAll(/^```[^\n]*\n[\s\S]*?^```/gm)].map(([block]) => block);
 
@@ -47,11 +50,11 @@ test("each page has the correct language, alternates and Notebook top bar", asyn
       assert.match(header, /aria-label="(?:Choose a language|言語を選択|选择语言)"/);
       assert.ok(html.includes("grid-template:&quot;. header header header .&quot;"), `${locale}/${page}: navigation is not above the sidebar`);
       for (const other of locales) {
-        assert.ok(html.includes(`hreflang="${other}" href="${url(other, page)}"`), `${locale}/${page}: missing alternate ${other}`);
+        assert.ok(html.includes(`hreflang="${other}" href="${site}${servedUrl(other, page)}"`), `${locale}/${page}: missing alternate ${other}`);
       }
     }
   }
-  assert.match(await read("dist/index.html"), /http-equiv="refresh" content="\d+;url=\/en"/);
+  assert.ok((await read("dist/index.html")).includes(`url=${base}/en`));
 });
 
 test("generated navigation and search indexes stay within their language", async () => {
@@ -90,5 +93,25 @@ test("each fenced example renders one highlighted code block and copy button", a
         assert.match(figure, /<span class="line">/);
       }
     }
+  }
+});
+
+test("deployed page links and assets resolve below the configured base", async () => {
+  for (const locale of locales) {
+    for (const page of pages) {
+      const html = await read(htmlPath(locale, page));
+      for (const [, href] of html.matchAll(/<(?:a|link|script|img)\b[^>]*\b(?:href|src)="(\/[^"#?]*)[^"]*"/g)) {
+        assert.ok(href.startsWith(`${base}/`), `${locale}/${page}: link escapes deployment base: ${href}`);
+        let relative = decodeURIComponent(href.slice(base.length));
+        if (!/\.[^/]+$/.test(relative)) relative = `${relative.replace(/\/$/, "")}/index.html`;
+        await access(new URL(`../dist${relative}`, import.meta.url));
+      }
+      assert.ok(html.includes(`${base}/api/search.json`), `${locale}/${page}: search endpoint lacks deployment base`);
+    }
+  }
+  // The docs artifact is merged into the same directory as the signed repos.
+  const entries = await readdir(new URL("../dist/", import.meta.url));
+  for (const reserved of ["pool", "dists", "pacman", "eleos-archive-keyring.asc", "eleos-archive-keyring.fingerprint"]) {
+    assert.ok(!entries.includes(reserved), `documentation would overwrite package repository data: ${reserved}`);
   }
 });

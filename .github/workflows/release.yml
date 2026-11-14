@@ -220,12 +220,62 @@ jobs:
           echo "Failed to create a signed commit" >&2
           exit 1
 
+  docs:
+    name: Build documentation
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      DOCS_SITE_URL: https://nexryai.github.io
+      DOCS_BASE_PATH: /eleos
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: docs/pnpm-lock.yaml
+
+      - name: Install documentation dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check documentation types
+        run: pnpm types:check
+
+      - name: Build and test documentation
+        run: pnpm test
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: eleos-docs
+          path: docs/dist
+          if-no-files-found: error
+          retention-days: 1
+
   apt:
-    name: Publish package repositories
+    name: Publish documentation and package repositories
     needs:
       - release
       - arch
+      - docs
     runs-on: ubuntu-24.04
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
@@ -243,8 +293,13 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::APT_GPG_PRIVATE_KEY is not configured; skipping the package repository deployment"
+            echo "::notice::APT_GPG_PRIVATE_KEY is not configured; skipping the combined Pages deployment"
           fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.available == 'true'
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
       - name: Install tools
         if: steps.key.outputs.available == 'true'
@@ -373,50 +428,14 @@ jobs:
             done
           done
 
-          echo "ELEOS_KEY_FPR=$keyid" >> "$GITHUB_ENV"
+          printf '%s\n' "$keyid" > eleos-archive-keyring.fingerprint
 
-      - name: Write index page
+      - name: Download documentation
         if: steps.key.outputs.available == 'true'
-        run: |
-          cat > public/index.html <<'HTML'
-          <!doctype html>
-          <html lang="en">
-          <head><meta charset="utf-8"><title>eleos package repositories</title></head>
-          <body>
-          <h1>eleos package repositories</h1>
-
-          <h2>APT (Debian, Ubuntu, ...)</h2>
-          <pre>
-          curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
-            | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/eleos-archive-keyring.gpg] https://nexryai.github.io/eleos/ stable main" \
-            | sudo tee /etc/apt/sources.list.d/eleos.list
-          sudo apt update
-          sudo apt install eleos
-          </pre>
-
-          <h2>pacman (Arch Linux)</h2>
-          <pre>
-          curl -fsSL https://nexryai.github.io/eleos/pacman/eleos-archive-keyring.asc \
-            -o /tmp/eleos-archive-keyring.asc
-          sudo pacman-key --add /tmp/eleos-archive-keyring.asc
-          sudo pacman-key --lsign-key __FPR__
-
-          sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
-          [eleos]
-          SigLevel = Required DatabaseRequired
-          Server = https://nexryai.github.io/eleos/pacman/$arch
-          EOF
-
-          sudo pacman -Syu
-          sudo pacman -S eleos
-          </pre>
-
-          <p><a href="https://github.com/nexryai/eleos">nexryai/eleos</a></p>
-          </body>
-          </html>
-          HTML
-          sed -i "s/__FPR__/${ELEOS_KEY_FPR}/" public/index.html
+        uses: actions/download-artifact@v4
+        with:
+          name: eleos-docs
+          path: public
 
       - name: Setup Pages
         if: steps.key.outputs.available == 'true'

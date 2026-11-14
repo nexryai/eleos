@@ -44,3 +44,24 @@ pnpm test
 `pnpm test` builds the site and checks translation coverage, example parity,
 internal links, language metadata, Notebook navigation and localized search data.
 It does not apply firewall rules or change the host's network configuration.
+
+## Release deployment
+
+The `release` workflow builds documentation from the released tag with Node.js 24
+and pnpm 10.33.0. It merges `docs/dist` into the same Pages artifact as the signed
+APT and pacman repositories. Documentation is the site root at
+`https://nexryai.github.io/eleos/`; there is no separate package landing page.
+Package paths (`pool/`, `dists/`, `pacman/`) and public-key URLs stay unchanged.
+The current signing-key fingerprint is published as
+`eleos-archive-keyring.fingerprint`.
+
+To reproduce the Pages build locally:
+
+```sh
+DOCS_SITE_URL=https://nexryai.github.io DOCS_BASE_PATH=/eleos pnpm test
+```
+
+These variables set Astro's `site` and `base`; local development defaults to `/`.
+The regression tests also verify deployed page/asset URLs and repository-path
+collisions. The combined deployment is skipped if `APT_GPG_PRIVATE_KEY` is absent,
+so a docs-only deployment cannot replace the package repositories.
