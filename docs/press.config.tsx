@@ -13,15 +13,12 @@ export default createPress(
       githubUrl: "https://github.com/nexryai/eleos",
     },
     renderPage(props) {
-      if (props.type === "docs") {
-        return props.renderDefault({
-          layout: "notebook",
-          layoutProps: {
-            nav: { mode: "top" },
-          },
-        });
-      }
-      return props.renderDefault();
+      return props.renderDefault({
+        layout: "notebook",
+        layoutProps: {
+          nav: { mode: "top" },
+        },
+      });
     },
   },
 });
