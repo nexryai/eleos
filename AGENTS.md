@@ -8,6 +8,12 @@
 
 - Write tests whenever possible. Prefer adding tests alongside new code and bug fixes.
 
+## Documentation
+
+- Update relevant documentation alongside changes to behavior, configuration,
+  installation, or usage. Keep the README and all affected documentation
+  translations in sync with the implementation.
+
 ## Releasing
 
 - Push a `v<version>` tag. The `release` workflow builds the binary archives,
