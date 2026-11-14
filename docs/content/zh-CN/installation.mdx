@@ -68,7 +68,7 @@ sudo snap connect eleos:firewall-control
 
 Snap 版采用严格限制模式，必须手动连接 `firewall-control`。配置位于 `/var/snap/eleos/current/eleos.yml`，CLI 命令为 `sudo eleos.elctl apply`。
 
-Snap 守护进程每15秒检查文件，在首次运行和配置变更时应用规则。需要手动控制首次配置时，先运行 `sudo snap stop eleos.daemon`，编辑配置，再运行 `sudo snap start eleos.daemon`。Snap 版不使用原生安装的 `eleos.service` 操作步骤。
+Snap 服务在启动时应用一次规则，不保留常驻进程。新安装默认禁用服务：连接接口并编辑配置后，运行 `sudo snap start --enable eleos.daemon` 立即应用规则并启用开机启动。以后修改配置后运行 `sudo eleos.elctl apply`，不再自动监视文件。现有安装在更新后保留服务的启用状态。Snap 版不使用原生安装的 `eleos.service` 操作步骤。
 
 ## 从源码构建
 

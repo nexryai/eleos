@@ -5,7 +5,7 @@ description: "YAML fields, shipped values, rule ordering and implementation limi
 
 ## File and defaults
 
-Native installations read `/etc/eleos.yml`; Snap reads `/var/snap/eleos/current/eleos.yml`. Use YAML mappings with spaces for indentation. Run `sudo elctl apply` after editing a native installation.
+Native installations read `/etc/eleos.yml`; Snap reads `/var/snap/eleos/current/eleos.yml`. Use YAML mappings with spaces for indentation. After editing, run `sudo elctl apply` for native installations or `sudo eleos.elctl apply` for Snap.
 
 **Omitted booleans are `false`.** Eleos unmarshals YAML into Go structs without merging the shipped default file. The values below are those in `config.default.yml`, not implicit defaults for missing keys. Unknown YAML keys are not rejected, so check spelling carefully. There is no dry-run or standalone validation command.
 

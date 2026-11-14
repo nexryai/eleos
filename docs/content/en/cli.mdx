@@ -59,16 +59,15 @@ sudo eleos.elctl apply
 sudo snap logs eleos.daemon
 ```
 
-The wrapper selects `/var/snap/eleos/current/eleos.yml`. The daemon hashes the configuration every 15 seconds and applies it initially, when the hash changes, or after a failed apply until it succeeds. Native systemd commands do not manage this daemon.
+The wrapper selects `/var/snap/eleos/current/eleos.yml`. After editing the initial configuration, enable the service with `sudo snap start --enable eleos.daemon`. It applies rules once at boot/start and exits; there is no polling or automatic retry. After editing, run `sudo eleos.elctl apply` (or `sudo snap restart --reload eleos.daemon` while active). An apply failure leaves the previous rules in place; correct the error and retry. Native systemd commands do not manage this service.
 
-To keep the Snap firewall disabled, disable the daemon **and** remove the table:
+To disable boot activation and stop the Snap firewall:
 
 ```sh
 sudo snap stop --disable eleos.daemon
-sudo eleos.elctl disable
 ```
 
-Stopping the daemon alone does not remove the applied rules. Running `disable` while leaving the daemon active can allow later configuration changes or a daemon restart to apply rules again. To resume:
+Stopping the active service removes its rules. If rules were applied manually while the service was inactive, remove them with `sudo eleos.elctl disable`. Manual CLI commands do not change the service state. To resume:
 
 ```sh
 sudo snap start --enable eleos.daemon

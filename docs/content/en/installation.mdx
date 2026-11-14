@@ -68,7 +68,7 @@ sudo snap connect eleos:firewall-control
 
 The Snap is strictly confined. The `firewall-control` connection must be made manually. Its configuration is `/var/snap/eleos/current/eleos.yml`, and its CLI is `sudo eleos.elctl apply`.
 
-The Snap daemon checks the file every 15 seconds and applies it initially and after changes. For a controlled first setup, stop it with `sudo snap stop eleos.daemon`, edit the configuration, then start it with `sudo snap start eleos.daemon`. Do not use the native `eleos.service` instructions for a Snap installation.
+The Snap service applies rules once at startup and leaves no resident process. On a new install it is disabled: edit the configuration after connecting the interface, then run `sudo snap start --enable eleos.daemon` to apply rules now and at boot. After editing, run `sudo eleos.elctl apply`; files are no longer watched. Existing installations keep their service enablement on refresh. Do not use the native `eleos.service` instructions for a Snap installation.
 
 ## Build from source
 

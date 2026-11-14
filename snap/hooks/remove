@@ -1,4 +1,5 @@
 #!/bin/sh
 # Best effort: remove our nftables table when the snap is removed.
+# Also covers rules applied manually while the service was inactive.
 # The firewall-control interface may already be disconnected at this point.
 "$SNAP/bin/elctl" disable >/dev/null 2>&1 || true

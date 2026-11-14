@@ -5,7 +5,7 @@ description: "YAML 字段、随附配置值、规则顺序和实现限制。"
 
 ## 配置文件与默认值
 
-原生安装读取 `/etc/eleos.yml`，Snap 读取 `/var/snap/eleos/current/eleos.yml`。使用 YAML 映射，以空格缩进。原生安装修改后请运行 `sudo elctl apply`。
+原生安装读取 `/etc/eleos.yml`，Snap 读取 `/var/snap/eleos/current/eleos.yml`。使用 YAML 映射，以空格缩进。修改后，原生安装运行 `sudo elctl apply`，Snap 版运行 `sudo eleos.elctl apply`。
 
 **省略的布尔值为 `false`。** Eleos 将 YAML 直接解析为 Go 结构体，不会与随附的默认文件合并。下表列出的是 `config.default.yml` 中的值，并非缺少字段时的隐式默认值。未知 YAML 字段不会被拒绝，请仔细检查拼写。当前没有 dry-run 或独立的配置验证命令。
 

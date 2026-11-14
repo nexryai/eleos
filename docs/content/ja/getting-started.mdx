@@ -66,7 +66,7 @@ sudo elctl apply
 
 ネイティブ版の CLI はファイルを監視しません。変更は適用コマンドの実行後に有効になります。systemd サービスが稼働中なら `sudo systemctl reload eleos` でも再適用できます。
 
-Snap 版では `/var/snap/eleos/current/eleos.yml` を編集します。`firewall-control` を接続するとデーモンが変更を自動適用します。手動適用には `sudo eleos.elctl apply` を使います。
+Snap 版では `/var/snap/eleos/current/eleos.yml` を編集します。初回は `firewall-control` を接続し、`sudo snap start --enable eleos.daemon` でサービスを有効にします。以降の変更後は `sudo eleos.elctl apply` を実行してください。
 
 ## 元の設定に戻す
 

@@ -59,16 +59,15 @@ sudo eleos.elctl apply
 sudo snap logs eleos.daemon
 ```
 
-ラッパーは `/var/snap/eleos/current/eleos.yml` を選択します。デーモンは15秒ごとに設定のハッシュを確認し、初回・変更時・適用失敗後の再試行時にルールを適用します。ネイティブ版の systemd コマンドではこのデーモンを管理しません。
+ラッパーは `/var/snap/eleos/current/eleos.yml` を選択します。初期設定を編集したら `sudo snap start --enable eleos.daemon` でサービスを有効にします。起動時に一度適用して終了し、常駐・定期監視・自動再試行は行いません。設定変更後は `sudo eleos.elctl apply`（サービスが有効な状態なら `sudo snap restart --reload eleos.daemon` でも可）を実行します。適用に失敗すると以前のルールが維持されるので、原因を修正して再実行してください。ネイティブ版の systemd コマンドではこのサービスを管理しません。
 
-Snap 版のファイアウォールを継続して無効にするには、デーモンを無効化し、テーブルも削除します。
+Snap 版のブート時の自動起動を無効にし、ファイアウォールを停止するには：
 
 ```sh
 sudo snap stop --disable eleos.daemon
-sudo eleos.elctl disable
 ```
 
-デーモンを止めるだけでは既に適用されたルールは消えません。デーモンを動かしたまま `disable` すると、その後の設定変更やデーモンの再起動で再適用される場合があります。再開する場合：
+起動済みのサービスを停止するとルールも削除します。サービス停止中に手動適用したルールは `sudo eleos.elctl disable` で削除してください。CLI の手動操作はサービスの状態を変更しません。再開する場合：
 
 ```sh
 sudo snap start --enable eleos.daemon

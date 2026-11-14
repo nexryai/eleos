@@ -66,7 +66,7 @@ sudo elctl apply
 
 原生 CLI 不监视配置文件，修改后需要重新应用。systemd 服务处于活动状态时，也可使用 `sudo systemctl reload eleos`。
 
-Snap 版请编辑 `/var/snap/eleos/current/eleos.yml`。连接 `firewall-control` 后，守护进程会自动应用变更；也可以手动运行 `sudo eleos.elctl apply`。
+Snap 版请编辑 `/var/snap/eleos/current/eleos.yml`。首次配置时，连接 `firewall-control` 后运行 `sudo snap start --enable eleos.daemon`。后续修改后运行 `sudo eleos.elctl apply`。
 
 ## 回滚
 

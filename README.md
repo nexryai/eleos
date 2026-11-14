@@ -43,6 +43,17 @@ Configuration lives in:
 /var/snap/eleos/current/eleos.yml
 ```
 
+Edit the configuration, then enable the service to apply rules now and at boot:
+
+```sh
+sudo snap start --enable eleos.daemon
+```
+
+The service applies rules once and exits; no process watches the configuration.
+After editing, run `sudo eleos.elctl apply`. Stop and disable the service with
+`sudo snap stop --disable eleos.daemon`; stopping an active service removes its rules.
+Existing installations keep their service enablement when refreshed.
+
 ### Install from dnf repositories
 If you are using one of the following distributions, you can install it from the [Official Copr](https://copr.fedorainfracloud.org/coprs/nexryai/eleos/).
 

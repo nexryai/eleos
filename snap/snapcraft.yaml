@@ -14,6 +14,12 @@ description: |
       sudo snap connect eleos:firewall-control
 
   Configuration lives in /var/snap/eleos/current/eleos.yml.
+  Edit it, then enable the boot service with:
+
+      sudo snap start --enable eleos.daemon
+
+  The service applies rules once and exits. After configuration changes, run
+  sudo eleos.elctl apply.
 license: MIT
 website: https://github.com/nexryai/eleos
 contact: https://github.com/nexryai/eleos/issues
@@ -34,8 +40,14 @@ apps:
     plugs:
       - firewall-control
   daemon:
-    command: bin/daemon
-    daemon: simple
+    # Keep the service name so refreshes preserve its enabled/disabled state.
+    command: bin/elctl-cli enable
+    daemon: oneshot
+    # firewall-control requires a manual connection before the first start.
+    install-mode: disable
+    # A stop command makes snapd set RemainAfterExit=yes for oneshot services.
+    stop-command: bin/elctl-cli disable
+    reload-command: bin/elctl-cli apply
     plugs:
       - firewall-control
 
@@ -63,7 +75,6 @@ parts:
     source: snap/local
     organize:
       elctl-cli: bin/elctl-cli
-      daemon: bin/daemon
 
   config:
     plugin: nil

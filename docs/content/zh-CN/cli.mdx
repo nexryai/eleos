@@ -59,16 +59,15 @@ sudo eleos.elctl apply
 sudo snap logs eleos.daemon
 ```
 
-包装脚本选择 `/var/snap/eleos/current/eleos.yml`。守护进程每15秒计算配置哈希，在首次运行、配置变化以及应用失败后的重试过程中应用规则。原生 systemd 命令不管理此守护进程。
+包装脚本选择 `/var/snap/eleos/current/eleos.yml`。编辑初始配置后，运行 `sudo snap start --enable eleos.daemon` 启用服务。服务在启动时应用一次规则后退出，不轮询配置或自动重试。修改后运行 `sudo eleos.elctl apply`（服务处于活动状态时也可运行 `sudo snap restart --reload eleos.daemon`）。应用失败时保留以前的规则，请修正错误后重试。原生 systemd 命令不管理此服务。
 
-要持续禁用 Snap 防火墙，需要同时禁用守护进程并删除规则表：
+禁用 Snap 防火墙的开机启动并停止服务：
 
 ```sh
 sudo snap stop --disable eleos.daemon
-sudo eleos.elctl disable
 ```
 
-仅停止守护进程不会删除已经应用的规则。守护进程仍在运行时执行 `disable`，后续配置变更或守护进程重启可能再次应用规则。恢复运行：
+停止活动服务会删除其规则。如果在服务未启动时手动应用过规则，请运行 `sudo eleos.elctl disable` 删除。手动 CLI 操作不会改变服务状态。恢复运行：
 
 ```sh
 sudo snap start --enable eleos.daemon

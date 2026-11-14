@@ -66,7 +66,7 @@ sudo elctl apply
 
 The native CLI does not watch the file. Changes take effect when you apply them. If the systemd service is active, `sudo systemctl reload eleos` also reapplies the configuration.
 
-For Snap, edit `/var/snap/eleos/current/eleos.yml`. After connecting `firewall-control`, the daemon applies changes automatically, or you can run `sudo eleos.elctl apply` manually.
+For Snap, edit `/var/snap/eleos/current/eleos.yml`. After connecting `firewall-control`, run `sudo snap start --enable eleos.daemon` for the initial setup. After subsequent edits, run `sudo eleos.elctl apply`.
 
 ## Roll back
 

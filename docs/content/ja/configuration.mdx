@@ -5,7 +5,7 @@ description: "YAML の項目、付属設定の値、ルールの評価順序と�
 
 ## 設定ファイルと初期値
 
-ネイティブ版は `/etc/eleos.yml`、Snap 版は `/var/snap/eleos/current/eleos.yml` を読み込みます。インデントには空白を使い、YAML のマッピング形式で記述します。ネイティブ版では編集後に `sudo elctl apply` を実行してください。
+ネイティブ版は `/etc/eleos.yml`、Snap 版は `/var/snap/eleos/current/eleos.yml` を読み込みます。インデントには空白を使い、YAML のマッピング形式で記述します。編集後はネイティブ版では `sudo elctl apply`、Snap 版では `sudo eleos.elctl apply` を実行してください。
 
 **省略した真偽値は `false` です。** YAML は Go の構造体に直接読み込まれ、付属の初期設定とはマージされません。以下の値は `config.default.yml` の内容であり、キーを省略した場合の暗黙の初期値ではありません。未知のキーはエラーにならないため、綴りを確認してください。dry-run や設定検証専用のコマンドはありません。
 
