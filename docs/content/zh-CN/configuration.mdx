@@ -1,0 +1,99 @@
+---
+title: "配置参考"
+description: "YAML 字段、随附配置值、规则顺序和实现限制。"
+---
+
+## 配置文件与默认值
+
+原生安装读取 `/etc/eleos.yml`，Snap 读取 `/var/snap/eleos/current/eleos.yml`。使用 YAML 映射，以空格缩进。原生安装修改后请运行 `sudo elctl apply`。
+
+**省略的布尔值为 `false`。** Eleos 将 YAML 直接解析为 Go 结构体，不会与随附的默认文件合并。下表列出的是 `config.default.yml` 中的值，并非缺少字段时的隐式默认值。未知 YAML 字段不会被拒绝，请仔细检查拼写。当前没有 dry-run 或独立的配置验证命令。
+
+## `default`
+
+| 字段 | 随附配置的值 | 行为 |
+| --- | --- | --- |
+| `allowAllIn` | `false` | input 链策略：true 为接受，false 为丢弃。此前的显式丢弃规则仍然生效。启用时会警告。 |
+| `allowAllOut` | `true` | output 链策略。为 true 时跳过受限出站规则的生成。 |
+| `allowAllFwd` | `false` | forward 链策略。设为 true 会广泛允许转发，并输出警告。 |
+| `allowPing` | `true` | 添加 IPv4/IPv6 echo-request 规则，速率为每秒4次、突发5次，超出部分丢弃。 |
+| `enableIPv6` | `true` | 添加邻居发现等部分 ICMPv6 规则。设为 false **不会** 禁用 IPv6 或 IPv6 端口规则。 |
+| `enableLogging` | 省略（`false`） | 在相应规则生成时添加 input/output 末尾的丢弃日志。为 false 时，保护规则仍可能记录日志。 |
+
+入站处理会先允许已建立/关联连接和环回流量，再处理后续地址限制。不合法流量和保护规则也先于配置的端口允许规则。`allowAllIn` 不会绕过前面的所有规则。
+
+## `ipset` 与 `ports`
+
+```yaml
+ipset:
+  - name: TRUSTED
+    ip: ["192.0.2.10/32", "2001:db8::10/128"]
+
+ports:
+  - port: 22
+    proto: tcp
+    allowIP: "$TRUSTED"
+    allowInterface: eth0
+  - port: 443
+    proto: tcp
+```
+
+| 字段 | 含义 |
+| --- | --- |
+| `ipset[].name` | 组名，在 `ports[].allowIP` 中使用 `$NAME` 引用。 |
+| `ipset[].ip` | IPv4/IPv6 地址或 CIDR 列表。 |
+| `ports[].port` | 数值形式的目标端口。使用有效的单个端口（1–65535），不支持端口范围。 |
+| `ports[].proto` | `tcp` 或 `udp`；省略时表示 **两者**。 |
+| `ports[].allowIP` | 源 IP、CIDR 或 `$NAME`。省略时不限制源地址，引用未定义组会报错。 |
+| `ports[].allowInterface` | 入站接口名称。省略时不限制接口。 |
+
+同一规则中的地址、接口、协议和端口条件必须全部匹配。`$NAME` 展开仅用于入站端口规则的 `allowIP`，不能用于任意地址字段。示例地址仅供文档演示。
+
+## `security`
+
+```yaml
+security:
+  alwaysDenyIP: ["192.0.2.99", "2001:db8::99"]
+  disablePortScanProtection: false
+  disableIpFragmentsBlock: false
+```
+
+`alwaysDenyIP` 在端口允许规则之前添加入站源地址丢弃规则，但在已建立/关联连接和环回流量放行之后处理。它不阻断出站或转发流量，也不会终止所有已有会话。
+
+`disablePortScanProtection: false` 添加 TCP XMAS、NULL 和过小 MSS 检查。`disableIpFragmentsBlock: false` 添加 IPv4 非零分片偏移检查。这两个字段省略时均为 false，因此除非显式禁用，否则这些保护处于启用状态。SYN flood 限制独立存在：SYN 流量进入速率为每秒30次、突发60次的链，超出部分被丢弃。
+
+## `outbound`
+
+仅在 `default.allowAllOut` 为 `false` 时生成这些规则。这不是完整的应用层出站策略：实现还会允许部分 ICMP/ICMPv6、IPv4 本地主机流量，以及不匹配初始 SYN 标志条件的 TCP 数据包。
+
+```yaml
+outbound:
+  compatibility: [tailscale, cloudflare_tunnel]
+  allowed:
+    - dport: "53"
+      proto: udp
+    - dport: "53"
+      proto: tcp
+    - dport: "443"
+      proto: tcp
+    - dport: "5432"
+      proto: tcp
+      dstIP: "192.0.2.0/24"
+```
+
+| 字段 | 含义 |
+| --- | --- |
+| `allowed[].dport` | 字符串形式的单个目标端口。 |
+| `allowed[].proto` | `tcp` 或 `udp`；省略时展开为两者。 |
+| `allowed[].dstIP` | 可选目标 IP/CIDR，不支持 `$NAME` 展开。 |
+| `compatibility` | 支持 `tailscale` 和 `cloudflare_tunnel`。 |
+
+`tailscale` 添加 UDP 41641 和3478；`cloudflare_tunnel` 添加 TCP/UDP 7844 和 TCP 443。这些只是 Eleos 额外添加的端口，不会自动允许 DNS 或应用可能需要的全部流量。限制出站时，也要显式允许服务所需的 UDP 回复等流量。
+
+## `router` 与 `nat`
+
+示例和限制见 [路由与 NAT](/zh-CN/networking)。`router` 包含 `configAsRouter`、`wanInterface`、`privateNetworks`、`lanInterfaces`、`forceDNS` 和 `customRoutes`。每个 `nat` 条目包含 `interface`、`allowIP`、`dstIP`、`dstPort`、`proto` 和 `natTo`。
+
+## 调试字段
+
+顶层 YAML 字段 `debugMode` 会被解析，但 CLI 使用 `-debug` 标志控制调试日志。请运行 `sudo elctl -debug apply`，不要依赖 YAML 中的 `debugMode: true`。

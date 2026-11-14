@@ -1,0 +1,29 @@
+---
+title: "Eleos firewall"
+description: "A lightweight Linux firewall configured in YAML and powered by nftables."
+---
+
+## Your rules, in one file
+
+Eleos manages Linux nftables directly through netlink. Define inbound ports, outbound access, IP restrictions and router settings in YAML, then apply them with `elctl`. The implementation is written in Go and is licensed under MIT. The project is under development.
+
+## Start here
+
+1. [Install Eleos](/en/installation) using a package repository, Snap or a source build.
+2. [Apply your first configuration](/en/getting-started), keeping access to your server.
+3. Read the [configuration reference](/en/configuration) before adding restrictions.
+
+## What Eleos manages
+
+Eleos creates an `inet` table named `eleos`, with input, output and forward chains. IPv4 and IPv6 filtering share this table. Reapplying replaces Eleos's own table in one netlink batch; disabling removes that table. Other nftables tables remain present and can still affect traffic.
+
+Inbound rules support TCP and UDP ports, source addresses or CIDRs, named address groups and interface restrictions. Additional features include outbound allow rules, scan and SYN flood mitigation, router masquerading, DNS redirection and IPv4 port forwarding.
+
+## Guides and reference
+
+- [Configuration](/en/configuration): every YAML section and its actual behavior.
+- [Routing and NAT](/en/networking): LAN forwarding, masquerading and port forwarding.
+- [CLI and services](/en/cli): apply changes, boot persistence and Snap behavior.
+- [Troubleshooting](/en/troubleshooting): permissions, connectivity and diagnostics.
+
+These docs describe the implementation in the [Eleos repository](https://github.com/nexryai/eleos), including `main.go`, `internal/config` and `internal/firewall`. The supplied `config.default.yml` and the larger `config.yml` are starting points; adapt them to your network.

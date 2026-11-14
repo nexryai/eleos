@@ -1,0 +1,86 @@
+---
+title: "CLI and services"
+description: "Command syntax, systemd lifecycle, Snap daemon behavior and development checks."
+---
+
+## Commands
+
+Run native commands with administrative privileges. The operation is the first positional argument.
+
+| Command | Effect |
+| --- | --- |
+| `sudo elctl enable` | Reads the configuration and applies the rules. Does not enable a boot service. |
+| `sudo elctl apply` | Reads the configuration and replaces the Eleos table. Uses the same apply path as `enable`. |
+| `sudo elctl disable` | Deletes the `inet eleos` table, if present. Does not read the configuration. |
+| `elctl` | Prints usage information. |
+
+`status`, `reload`, `validate` and `dry-run` are not CLI subcommands. Use systemd and `nft` for service/rule inspection.
+
+## Options precede the operation
+
+Go's flag parser stops at the first positional argument. Put `-f` and `-debug` **before** `enable`, `apply` or `disable`:
+
+```sh
+sudo elctl -f /etc/eleos-test.yml apply
+sudo elctl -debug apply
+sudo elctl -debug -f /etc/eleos-test.yml enable
+```
+
+`-f` defaults to `/etc/eleos.yml`. `-debug` enables diagnostic logging. Applying a custom file still replaces the same `inet eleos` table; it does not create a second independent firewall.
+
+The build step occurs before the netlink batch is flushed. If rule construction fails, that apply attempt does not replace the current table. YAML parsing alone does not detect every unsafe or unsupported setting.
+
+## Native systemd service
+
+```sh
+sudo systemctl start eleos
+sudo systemctl enable eleos
+sudo systemctl reload eleos
+sudo systemctl status eleos
+sudo journalctl -u eleos -b
+```
+
+The unit is `Type=oneshot` with `RemainAfterExit=yes`; `active (exited)` is expected. `ExecStart` runs `elctl enable`, `ExecReload` runs `elctl apply`, and `ExecStop` runs `elctl disable`. It runs with a `CAP_NET_ADMIN` capability bound and other hardening settings.
+
+To disable boot activation and stop the service:
+
+```sh
+sudo systemctl disable --now eleos
+```
+
+Manual `elctl` commands do not update systemd's service state. Inspect the actual table when the two may differ.
+
+## Snap service
+
+```sh
+sudo snap connect eleos:firewall-control
+sudo snap services eleos
+sudo eleos.elctl apply
+sudo snap logs eleos.daemon
+```
+
+The wrapper selects `/var/snap/eleos/current/eleos.yml`. The daemon hashes the configuration every 15 seconds and applies it initially, when the hash changes, or after a failed apply until it succeeds. Native systemd commands do not manage this daemon.
+
+To keep the Snap firewall disabled, disable the daemon **and** remove the table:
+
+```sh
+sudo snap stop --disable eleos.daemon
+sudo eleos.elctl disable
+```
+
+Stopping the daemon alone does not remove the applied rules. Running `disable` while leaving the daemon active can allow later configuration changes or a daemon restart to apply rules again. To resume:
+
+```sh
+sudo snap start --enable eleos.daemon
+```
+
+## Build and test for development
+
+From the Eleos repository root, with the Go version required by `go.mod`:
+
+```sh
+CGO_ENABLED=0 go build -o elctl main.go
+CGO_ENABLED=0 go test ./...
+```
+
+Unit tests cover address handling and rule construction. Tests under `integration/` require the `integration` build tag, root privileges, a built binary and tools for network namespaces/nftables. Run them only in an isolated test environment; see the repository's integration tests and CI workflow for the required setup.

@@ -1,0 +1,86 @@
+---
+title: "安装"
+description: "通过 APT、COPR、pacman、Snap 或源码安装。"
+---
+
+## 安装前准备
+
+需要支持 nftables 的 Linux。应用规则需要 root 或 `CAP_NET_ADMIN` 权限。`nft` 命令可用于诊断，但 Eleos 本身通过 netlink 直接操作规则。
+
+使用 Eleos 前，请停用有冲突的防火墙管理服务。如果通过远程连接管理机器，请保留控制台访问方式，并在启用前允许 SSH 端口。安装后请阅读 [首次配置](/zh-CN/getting-started)。
+
+## Debian 和 Ubuntu（APT）
+
+按需安装 `curl` 和 `gpg`，然后添加签名仓库：
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/eleos-archive-keyring.gpg] https://nexryai.github.io/eleos/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/eleos.list
+
+sudo apt update
+sudo apt install eleos
+```
+
+## Fedora 等发行版（COPR）
+
+使用 [项目 COPR](https://copr.fedorainfracloud.org/coprs/nexryai/eleos/)。是否可用取决于仓库是否发布了对应发行版的构建。如果没有 `dnf copr` 命令，请安装 DNF COPR 插件。
+
+```sh
+sudo dnf copr enable nexryai/eleos
+sudo dnf install eleos
+```
+
+## Arch Linux（pacman）
+
+签名仓库提供 `x86_64` 和 `aarch64` 软件包。仓库配置只需添加一次，更新时不要重复追加。
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/pacman/eleos-archive-keyring.asc \
+  -o /tmp/eleos-archive-keyring.asc
+sudo pacman-key --add /tmp/eleos-archive-keyring.asc
+sudo pacman-key --lsign-key 4795EA54BDDDEAA6C8145A1EB482297ABFCE2726
+
+sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+[eleos]
+SigLevel = Required DatabaseRequired
+Server = https://nexryai.github.io/eleos/pacman/$arch
+EOF
+
+sudo pacman -Syu
+sudo pacman -S eleos
+```
+
+上述指纹来自仓库 README。如果签名密钥发生变更，请先查看 [软件包仓库页面](https://nexryai.github.io/eleos/)，再信任新密钥。
+
+## Snap
+
+```sh
+sudo snap install eleos
+sudo snap connect eleos:firewall-control
+```
+
+Snap 版采用严格限制模式，必须手动连接 `firewall-control`。配置位于 `/var/snap/eleos/current/eleos.yml`，CLI 命令为 `sudo eleos.elctl apply`。
+
+Snap 守护进程每15秒检查文件，在首次运行和配置变更时应用规则。需要手动控制首次配置时，先运行 `sudo snap stop eleos.daemon`，编辑配置，再运行 `sudo snap start eleos.daemon`。Snap 版不使用原生安装的 `eleos.service` 操作步骤。
+
+## 从源码构建
+
+需要 Git 和满足 `go.mod` 版本要求的 Go 工具链。在克隆后的仓库中执行以下命令。最后的 `install` 会覆盖 `/etc/eleos.yml`，已有配置时请先备份。
+
+```sh
+git clone https://github.com/nexryai/eleos.git
+cd eleos
+CGO_ENABLED=0 go build -o elctl main.go
+
+sudo install -m 0755 elctl /usr/bin/elctl
+sudo install -m 0644 systemd/eleos.service /etc/systemd/system/eleos.service
+sudo install -m 0644 config.default.yml /etc/eleos.yml
+sudo systemctl daemon-reload
+```
+
+## 下一步
+
+原生软件包和源码安装读取 `/etc/eleos.yml`。编辑该文件后，按照 [首次配置](/zh-CN/getting-started) 应用规则并设置开机启动。

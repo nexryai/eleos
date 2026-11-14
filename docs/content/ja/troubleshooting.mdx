@@ -1,0 +1,70 @@
+---
+title: "トラブルシューティング"
+description: "設定・権限・接続・サービスの問題を切り分けます。"
+---
+
+## 設定を読み込めない・解析できない
+
+ファイルの場所、権限、YAML のインデントを確認します。ネイティブ版は `/etc/eleos.yml`、Snap 版は `/var/snap/eleos/current/eleos.yml` を使用します。別ファイルを指定する `-f` は操作名より前に置いてください。
+
+```sh
+sudo elctl -f /etc/eleos.yml apply
+```
+
+`undefined ipset` は `ports[].allowIP: "$NAME"` に対応する `ipset[].name` がないことを意味します。プロトコルは `tcp` または `udp`、アドレスは有効な IP/CIDR、ポートは有効な単一値を使います。`dport`・`dstPort`・`natTo` など文字列のポート項目は引用符で囲んでください。
+
+未知の YAML キーは無視されます。[設定リファレンス](/ja/configuration) と綴りを照合し、省略した真偽値は false になる点も確認してください。
+
+## netlink の権限エラー
+
+`sudo` を使い、実行環境に `CAP_NET_ADMIN` と nftables へのアクセスがあるか確認します。コンテナでは root でも必要な権限がない場合があります。Snap 版では必要なインターフェイスを接続します。
+
+```sh
+sudo snap connect eleos:firewall-control
+sudo eleos.elctl apply
+```
+
+## SELinux 環境で systemd が権限エラーを出す
+
+プロジェクトの README では RHEL 系で実行ファイルの SELinux コンテキストを修復する方法を案内しています。
+
+```sh
+sudo restorecon -R /usr/bin/elctl
+sudo journalctl -u eleos -b
+```
+
+解決しない場合は journal と SELinux の拒否記録を調べてください。最初の対応として SELinux を無効化する必要はありません。
+
+## SSH やサービスにつながらない
+
+コンソールから `ports`、管理元アドレス、`allowInterface` を確認します。`proto` の省略時は TCP/UDP の両方を開きますが、誤ったプロトコルを指定すると目的のサービスに到達できません。サービス自身が期待するアドレスとポートで待ち受けているかも確認してください。
+
+```sh
+sudo nft list table inet eleos
+sudo nft list ruleset
+sudo journalctl -k -b
+```
+
+`nft list ruleset` では他のツールのルールも確認できます。Eleos は他のテーブルを削除しません。`alwaysDenyIP` は確立済み・関連接続より後に評価するため、新しい接続と実際のルール順序を確認してください。
+
+必要ならコンソールからバックアップを復元して再適用します。`sudo elctl disable` が削除するのは Eleos のテーブルだけです。Snap 版では [CLI とサービス](/ja/cli) の手順で先にデーモンを停止・無効化してください。
+
+## DNS や送信側のアプリケーションが動かない
+
+`allowAllOut` が false の場合、必要な宛先ポートとプロトコルを `outbound.allowed` に追加します。DNS には UDP と TCP の53番が必要な場合があります。互換設定で追加するのはリファレンスに記載したポートだけです。UDP を使うサービスの応答にも明示的な送信ルールが必要になる場合があります。
+
+## Docker のネットワークと競合する
+
+README では回避策として `default.allowAllFwd: true` を案内しています。ただし Eleos の forward チェーンで広く転送を許可し、転送の制限を弱めます。採用前にホストの公開範囲を確認してください。他のテーブルは引き続き Docker の通信に影響する場合があります。
+
+## ルーターやポート転送が動かない
+
+`net.ipv4.ip_forward`、インターフェイス名・アドレス、経路を確認します。NAT はカーネルの転送を有効にしません。転送先が想定した経路で応答できること、ルーターモードが必要な確立済み・関連通信の転送許可を提供していることも確認します。[ルーティングと NAT](/ja/networking) で広範囲の転送許可と IPv4 専用の制限事項を確認してください。
+
+## 無効化したルールが戻る
+
+ネイティブ版の自動起動や Snap のデーモンは `elctl disable` とは別に動作します。無効な状態を維持するには対応するサービスも無効にしてください。Snap デーモンは設定変更や再起動で再適用し、デーモンの停止だけでは既存ルールは消えません。
+
+## 問題を報告する
+
+[Issue トラッカー](https://github.com/nexryai/eleos/issues) に、インストール方法、Eleos のパッケージ・タグまたはコミット、ディストリビューション、カーネル、実行コマンド、エラー、最小限の設定例を記載してください。可能なら関連する journal とルールも添え、公開前に私的なアドレス、認証情報、無関係な機密情報を取り除いてください。

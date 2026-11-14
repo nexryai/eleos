@@ -1,0 +1,95 @@
+---
+title: "Routing and NAT"
+description: "Configure forwarding, masquerading, DNS redirection and IPv4 port forwarding."
+---
+
+## Prepare the network
+
+Configure interface addresses, routes and a reachable gateway separately. Eleos installs firewall/NAT rules; it does not configure interfaces, DHCP, DNS servers or kernel forwarding. Replace all interface names and example addresses below with your own.
+
+Check and, when routing IPv4, enable kernel forwarding:
+
+```sh
+sysctl net.ipv4.ip_forward
+sudo sysctl -w net.ipv4.ip_forward=1
+```
+
+Persist the setting using your distribution's sysctl configuration. Eleos only reads this value and warns when it is zero. IPv6 routing also requires the appropriate kernel forwarding configuration.
+
+Start with the host defaults from [First configuration](/en/getting-started), keeping `allowAllFwd: false`, and add the following sections to the **same** YAML file. These fragments are not standalone host configurations.
+
+## LAN to WAN with masquerading
+
+```yaml
+router:
+  configAsRouter: true
+  wanInterface: eth0
+  privateNetworks: ["192.168.10.0/24"]
+  lanInterfaces: [eth1]
+```
+
+| Field | Effect |
+| --- | --- |
+| `configAsRouter` | Enables router forwarding rules and established/related forwarding acceptance. |
+| `wanInterface` | Outgoing interface used for private-network masquerading. |
+| `privateNetworks` | Source CIDRs to masquerade when leaving the WAN. IPv6 CIDRs can generate NAT66 masquerading too. |
+| `lanInterfaces` | Incoming interfaces whose forwarded traffic is accepted. |
+
+**LAN forwarding is broad:** `lanInterfaces` rules accept forwarded traffic arriving on each listed interface, without restricting it to the WAN or to `privateNetworks`. The `privateNetworks` list constrains masquerading, not these forwarding permissions. Review segmentation requirements before treating this as a router access policy.
+
+## Custom routes and DNS redirection
+
+```yaml
+router:
+  configAsRouter: true
+  wanInterface: eth0
+  privateNetworks: ["192.168.10.0/24"]
+  lanInterfaces: [eth1]
+  forceDNS: "192.168.10.1"
+  customRoutes:
+    - allowIP: "10.0.10.0/24"
+      allowInterface: wg1
+      allowDST: "192.168.10.0/24"
+```
+
+`customRoutes` permits forwarded traffic matching all three fields: source `allowIP`, incoming `allowInterface` and destination `allowDST`. It also adds matching masquerading rules. These are firewall/NAT rules, not operating-system routing-table entries.
+
+`forceDNS` redirects TCP/UDP destination port 53 arriving from LAN interfaces to the specified IPv4 address, except traffic already addressed to that resolver (and the implemented localhost-source exception). It does not configure or start a DNS resolver and does not block DNS-over-HTTPS/TLS. When the resolver runs on the Eleos host, also allow TCP/UDP 53 in `ports` for the intended LAN sources.
+
+## IPv4 port forwarding
+
+Keep the router section above to provide established/related forwarding acceptance, then add:
+
+```yaml
+nat:
+  - interface: eth0
+    allowIP: "198.51.100.0/24"
+    dstIP: "203.0.113.10"
+    dstPort: "8443"
+    proto: tcp
+    natTo: "192.168.10.20:443"
+```
+
+This example matches TCP 8443 addressed to `203.0.113.10` on `eth0`, from `198.51.100.0/24`, and translates it to `192.168.10.20:443`. The public addresses are documentation placeholders. Use an address actually assigned/routed to your gateway. The target and the return path must be reachable.
+
+| Field | Meaning |
+| --- | --- |
+| `interface` | Incoming interface for DNAT; outgoing interface for the corresponding return-traffic SNAT rule. |
+| `allowIP` | Source IP/CIDR for forwarding permission. Specify explicitly; `0.0.0.0/0` allows any IPv4 source. |
+| `dstIP` | Original destination IPv4 address, without CIDR. |
+| `dstPort` | Original destination port as a string. |
+| `proto` | Explicit `tcp` or `udp`. |
+| `natTo` | IPv4 target and port, such as `192.168.10.20:443`. |
+
+The implementation adds a forward accept rule matching the incoming interface and source, without limiting that rule to the translated destination or port. The associated SNAT rule matches the target source address and outgoing interface. Review the generated rules for your topology.
+
+Port-forward rules can be built without router mode, but that path does not add general established/related acceptance to the forward chain. With `allowAllFwd: false`, replies can be dropped. Do not assume NAT-only configuration is a complete forwarding setup.
+
+## Verify
+
+```sh
+sudo elctl apply
+sudo nft list table inet eleos
+```
+
+Check forwarding, the actual interface names, routes and both directions of a connection from a separate client. `forceDNS` and explicit `nat` targets are IPv4-only in the current implementation; IPv6 filtering and private-network masquerading are separate features.

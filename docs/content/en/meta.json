@@ -1,0 +1,12 @@
+{
+  "title": "Eleos",
+  "pages": [
+    "index",
+    "installation",
+    "getting-started",
+    "configuration",
+    "networking",
+    "cli",
+    "troubleshooting"
+  ]
+}

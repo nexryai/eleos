@@ -1,0 +1,70 @@
+---
+title: "故障排查"
+description: "排查配置、权限、网络连接和服务问题。"
+---
+
+## 无法读取或解析配置
+
+检查路径、权限和 YAML 缩进。原生安装使用 `/etc/eleos.yml`，Snap 使用 `/var/snap/eleos/current/eleos.yml`。自定义文件的 `-f` 必须放在操作名前：
+
+```sh
+sudo elctl -f /etc/eleos.yml apply
+```
+
+`undefined ipset` 表示 `ports[].allowIP: "$NAME"` 没有对应的 `ipset[].name`。协议使用 `tcp` 或 `udp`，地址使用有效 IP/CIDR，端口使用有效单值。`dport`、`dstPort` 和 `natTo` 等字符串字段应加引号。
+
+未知 YAML 字段会被忽略。请对照 [配置参考](/zh-CN/configuration) 检查名称，并注意省略的布尔值会变为 false。
+
+## netlink 权限错误
+
+使用 `sudo`，并确认环境具备 `CAP_NET_ADMIN` 和 nftables 访问权限。容器内即使是 root，也可能没有所需能力。Snap 版需要连接相应接口：
+
+```sh
+sudo snap connect eleos:firewall-control
+sudo eleos.elctl apply
+```
+
+## SELinux 环境下的 systemd 权限问题
+
+项目 README 建议在 RHEL 系统上恢复可执行文件的 SELinux 上下文：
+
+```sh
+sudo restorecon -R /usr/bin/elctl
+sudo journalctl -u eleos -b
+```
+
+如果问题仍然存在，请检查 journal 和 SELinux 拒绝记录，不必首先禁用 SELinux。
+
+## 无法访问 SSH 或其他服务
+
+通过控制台检查 `ports`、管理端源地址和 `allowInterface`。省略 `proto` 会同时开放 TCP 和 UDP，而协议写错可能导致目标服务无法访问。还应确认服务正在预期的地址和端口监听。
+
+```sh
+sudo nft list table inet eleos
+sudo nft list ruleset
+sudo journalctl -k -b
+```
+
+`nft list ruleset` 也会显示其他工具的规则。Eleos 不删除其他表。`alwaysDenyIP` 在已建立/关联连接之后处理，请测试新连接并检查实际规则顺序。
+
+必要时从控制台恢复配置备份并重新应用。`sudo elctl disable` 只删除 Eleos 表。Snap 版请先按照 [CLI 与服务](/zh-CN/cli) 停止并禁用守护进程。
+
+## DNS 或出站应用无法工作
+
+当 `allowAllOut` 为 false 时，需要在 `outbound.allowed` 中允许所需的目标端口和协议。DNS 可能同时需要 UDP 和 TCP 53。兼容选项只添加参考中列出的特定端口。UDP 服务的回复也可能需要显式出站规则。
+
+## 与 Docker 网络冲突
+
+项目 README 建议将 `default.allowAllFwd` 设为 true 作为变通方法，但这会在 Eleos 的 forward 链中广泛允许转发，削弱转发限制。采用前请评估主机的网络暴露范围；其他防火墙表仍可能影响 Docker 流量。
+
+## 路由器或端口转发不工作
+
+检查 `net.ipv4.ip_forward`、接口名、接口地址和路由。NAT 不会启用内核转发。确认目标能通过预期返回路径回复，且路由器模式提供了所需的已建立/关联连接放行。请查看 [路由与 NAT](/zh-CN/networking) 中较宽的转发权限及仅支持 IPv4 的限制。
+
+## 禁用后规则又出现
+
+原生服务的开机启动和 Snap 守护进程与 `elctl disable` 相互独立。如需保持规则不存在，也要禁用相应服务。Snap 守护进程会在配置变化或重启后重新应用；仅停止守护进程不会删除现有规则。
+
+## 报告问题
+
+请使用 [问题跟踪器](https://github.com/nexryai/eleos/issues)，提供安装方式、Eleos 软件包/标签或提交、发行版、内核、执行命令、错误信息和经过脱敏的最小配置。尽可能附上相关 journal 和规则；分享前请移除私有地址、凭据和无关敏感信息。

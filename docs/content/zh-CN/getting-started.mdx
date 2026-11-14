@@ -1,0 +1,80 @@
+---
+title: "首次配置"
+description: "允许管理访问，应用主机规则并设置开机启动。"
+---
+
+## 保留恢复访问的方式
+
+启用前请停用有冲突的防火墙管理服务，并保留控制台访问方式。新 SSH 连接必须匹配入站允许规则。已建立的连接会提前放行，因此现有 SSH 会话没有断开，并不能证明新规则正确。
+
+## 编写主机配置
+
+备份 `/etc/eleos.yml` 后再编辑：
+
+```sh
+sudo cp /etc/eleos.yml /etc/eleos.yml.bak
+sudo nano /etc/eleos.yml
+```
+
+下面的示例允许出站流量、ping、HTTP 和 HTTPS，并仅允许一个源地址访问 SSH。将文档示例地址 `192.0.2.10/32` 替换为实际管理端 IP/CIDR；如果 SSH 不使用22端口，也要相应修改。
+
+```yaml
+default:
+  allowAllIn: false
+  allowAllOut: true
+  allowAllFwd: false
+  allowPing: true
+  enableIPv6: true
+  enableLogging: true
+
+ports:
+  - port: 22
+    proto: tcp
+    allowIP: "192.0.2.10/32"
+  - port: 80
+    proto: tcp
+  - port: 443
+    proto: tcp
+```
+
+随附的默认配置开放 UDP 5353（mDNS），但 **不允许 SSH**。上面的示例会替换该配置，并省略 mDNS。请仅保留需要的端口。
+
+## 应用并验证
+
+原生安装可通过 systemd 应用规则并管理服务状态：
+
+```sh
+sudo systemctl start eleos
+sudo systemctl status eleos
+sudo nft list table inet eleos
+```
+
+从允许的地址建立一个 **新的 SSH 连接**，并验证需要公开的服务。确认无误后启用开机启动：
+
+```sh
+sudo systemctl enable eleos
+```
+
+如果只需手动应用一次，可使用 `sudo elctl enable`。它应用相同的规则，但不会启用 systemd 开机启动。
+
+## 后续修改
+
+```sh
+sudo nano /etc/eleos.yml
+sudo elctl apply
+```
+
+原生 CLI 不监视配置文件，修改后需要重新应用。systemd 服务处于活动状态时，也可使用 `sudo systemctl reload eleos`。
+
+Snap 版请编辑 `/var/snap/eleos/current/eleos.yml`。连接 `firewall-control` 后，守护进程会自动应用变更；也可以手动运行 `sudo eleos.elctl apply`。
+
+## 回滚
+
+通过可访问的控制台恢复备份并应用：
+
+```sh
+sudo cp /etc/eleos.yml.bak /etc/eleos.yml
+sudo elctl apply
+```
+
+使用 `sudo elctl disable` 删除 Eleos 规则；若还需禁用开机启动，使用 `sudo systemctl disable --now eleos`。删除 Eleos 表不会删除其他工具的规则。禁用 Snap 版前，请阅读 [CLI 与服务](/zh-CN/cli)。

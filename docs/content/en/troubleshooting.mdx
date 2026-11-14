@@ -1,0 +1,70 @@
+---
+title: "Troubleshooting"
+description: "Diagnose configuration, permissions, connectivity and service issues."
+---
+
+## Configuration cannot be read or parsed
+
+Check the file path, permissions and YAML indentation. Native installs use `/etc/eleos.yml`; Snap uses `/var/snap/eleos/current/eleos.yml`. Put `-f` before the operation when selecting a custom file:
+
+```sh
+sudo elctl -f /etc/eleos.yml apply
+```
+
+An `undefined ipset` error means a `ports[].allowIP: "$NAME"` reference has no matching `ipset[].name`. Use `tcp` or `udp` for protocol fields, valid IP/CIDR values for addresses, and single valid ports. Quote string-valued ports such as `dport`, `dstPort` and `natTo`.
+
+Unknown YAML keys are silently ignored. Check names against the [configuration reference](/en/configuration), and remember that missing boolean fields become false.
+
+## Netlink permission errors
+
+Use `sudo` and ensure the environment grants `CAP_NET_ADMIN` and access to nftables. Containers may not have this capability even when their user is root. For Snap, connect the required interface:
+
+```sh
+sudo snap connect eleos:firewall-control
+sudo eleos.elctl apply
+```
+
+## systemd permission problems on SELinux systems
+
+The project README documents restoring the executable's SELinux context on RHEL-based systems:
+
+```sh
+sudo restorecon -R /usr/bin/elctl
+sudo journalctl -u eleos -b
+```
+
+Inspect the journal and SELinux denials if the failure persists. There is no need to disable SELinux as a first step.
+
+## SSH or another service is unreachable
+
+Use console access to check `ports`, the administrative source address and `allowInterface`. An omitted `proto` opens both TCP and UDP, while a wrong protocol can leave the intended service inaccessible. Check whether the service is listening on the expected address and port.
+
+```sh
+sudo nft list table inet eleos
+sudo nft list ruleset
+sudo journalctl -k -b
+```
+
+`nft list ruleset` also shows rules from other tools. Eleos does not remove other tables. `alwaysDenyIP` is evaluated after established/related connections; test both new connections and the actual generated rule order.
+
+If needed, restore the configuration backup from the console and reapply. `sudo elctl disable` removes only Eleos's table. On Snap, stop/disable the daemon first as described in [CLI and services](/en/cli).
+
+## DNS or outbound applications fail
+
+When `allowAllOut` is false, allow the required destination ports and protocols under `outbound.allowed`. DNS may require both UDP and TCP 53. Compatibility entries only add the specific ports listed in the reference. Services using UDP may also need explicit output rules for their replies.
+
+## Docker networking conflicts
+
+The project README suggests `default.allowAllFwd: true` as a workaround. This broadly accepts forwarded traffic in Eleos's forward chain and weakens its forwarding restrictions. Assess the host's network exposure before using it; other firewall tables can still affect Docker traffic.
+
+## Router or port forwarding does not work
+
+Check `net.ipv4.ip_forward`, interface names, interface addresses and routes. NAT does not enable kernel forwarding. Verify that the target can respond through the expected return path and that router mode supplies the needed established/related forwarding rules. Review the broad forwarding permissions and IPv4-only limits in [Routing and NAT](/en/networking).
+
+## Rules return after disabling
+
+Native boot activation and Snap daemon activity are separate from `elctl disable`. Disable the corresponding service too if you want rules to remain absent. The Snap daemon reapplies after configuration changes or a restart; stopping it alone does not delete existing rules.
+
+## Report an issue
+
+Use the [issue tracker](https://github.com/nexryai/eleos/issues). Include the installation method, Eleos package/tag or commit, distribution, kernel, command, error message and a minimal redacted configuration. Include relevant journal output and rules where possible; remove private addresses, credentials and unrelated sensitive details before sharing.

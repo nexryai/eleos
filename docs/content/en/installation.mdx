@@ -1,0 +1,86 @@
+---
+title: "Installation"
+description: "Install with APT, COPR, pacman, Snap or a source build."
+---
+
+## Before installing
+
+Use Linux with nftables support. Applying rules requires root or `CAP_NET_ADMIN`. The `nft` command is useful for diagnostics but Eleos itself talks directly to netlink.
+
+Disable conflicting firewall managers before using Eleos. If you administer the machine remotely, keep console access and allow your SSH port before enabling it. Follow [First configuration](/en/getting-started) after installation.
+
+## Debian and Ubuntu (APT)
+
+Install `curl` and `gpg` if needed, then register the signed repository:
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/eleos-archive-keyring.gpg] https://nexryai.github.io/eleos/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/eleos.list
+
+sudo apt update
+sudo apt install eleos
+```
+
+## Fedora and related distributions (COPR)
+
+Use the [project COPR](https://copr.fedorainfracloud.org/coprs/nexryai/eleos/). Availability depends on the builds published for your distribution. Install the DNF COPR plugin if `dnf copr` is unavailable.
+
+```sh
+sudo dnf copr enable nexryai/eleos
+sudo dnf install eleos
+```
+
+## Arch Linux (pacman)
+
+The signed repository publishes `x86_64` and `aarch64` packages. Add the repository section once; do not append it again on every update.
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/pacman/eleos-archive-keyring.asc \
+  -o /tmp/eleos-archive-keyring.asc
+sudo pacman-key --add /tmp/eleos-archive-keyring.asc
+sudo pacman-key --lsign-key 4795EA54BDDDEAA6C8145A1EB482297ABFCE2726
+
+sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+[eleos]
+SigLevel = Required DatabaseRequired
+Server = https://nexryai.github.io/eleos/pacman/$arch
+EOF
+
+sudo pacman -Syu
+sudo pacman -S eleos
+```
+
+The fingerprint above is the one in the repository README. If the signing key changes, check the [package repository page](https://nexryai.github.io/eleos/) before trusting a new key.
+
+## Snap
+
+```sh
+sudo snap install eleos
+sudo snap connect eleos:firewall-control
+```
+
+The Snap is strictly confined. The `firewall-control` connection must be made manually. Its configuration is `/var/snap/eleos/current/eleos.yml`, and its CLI is `sudo eleos.elctl apply`.
+
+The Snap daemon checks the file every 15 seconds and applies it initially and after changes. For a controlled first setup, stop it with `sudo snap stop eleos.daemon`, edit the configuration, then start it with `sudo snap start eleos.daemon`. Do not use the native `eleos.service` instructions for a Snap installation.
+
+## Build from source
+
+Install Git and a Go toolchain meeting the version in `go.mod`. Run these commands from the cloned repository. The final `install` command overwrites `/etc/eleos.yml`; back up an existing configuration before using it.
+
+```sh
+git clone https://github.com/nexryai/eleos.git
+cd eleos
+CGO_ENABLED=0 go build -o elctl main.go
+
+sudo install -m 0755 elctl /usr/bin/elctl
+sudo install -m 0644 systemd/eleos.service /etc/systemd/system/eleos.service
+sudo install -m 0644 config.default.yml /etc/eleos.yml
+sudo systemctl daemon-reload
+```
+
+## Next step
+
+Native packages and source builds read `/etc/eleos.yml`. Edit this file and follow [First configuration](/en/getting-started) to apply it and enable boot persistence.

@@ -1,0 +1,86 @@
+---
+title: "インストール"
+description: "APT・COPR・pacman・Snap・ソースビルドから導入する方法。"
+---
+
+## インストール前の確認
+
+nftables に対応した Linux が必要です。ルールの適用には root または `CAP_NET_ADMIN` 権限が必要です。`nft` コマンドは診断に使えますが、Eleos 本体は netlink を直接操作します。
+
+Eleos を使用する前に競合するファイアウォール管理サービスを無効にしてください。リモート管理の場合はコンソールへのアクセス手段を確保し、有効化する前に SSH ポートを許可します。インストール後は [初期設定](/ja/getting-started) に進んでください。
+
+## Debian・Ubuntu（APT）
+
+必要に応じて `curl` と `gpg` をインストールし、署名付きリポジトリを登録します。
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/eleos-archive-keyring.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/eleos-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/eleos-archive-keyring.gpg] https://nexryai.github.io/eleos/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/eleos.list
+
+sudo apt update
+sudo apt install eleos
+```
+
+## Fedora など（COPR）
+
+[プロジェクトの COPR](https://copr.fedorainfracloud.org/coprs/nexryai/eleos/) を利用します。対象ディストリビューション向けのビルドが公開されている必要があります。`dnf copr` が使えない場合は DNF の COPR プラグインを導入してください。
+
+```sh
+sudo dnf copr enable nexryai/eleos
+sudo dnf install eleos
+```
+
+## Arch Linux（pacman）
+
+署名付きリポジトリで `x86_64` と `aarch64` 向けパッケージを公開しています。リポジトリ設定の追記は一度だけ行い、更新のたびに重複させないでください。
+
+```sh
+curl -fsSL https://nexryai.github.io/eleos/pacman/eleos-archive-keyring.asc \
+  -o /tmp/eleos-archive-keyring.asc
+sudo pacman-key --add /tmp/eleos-archive-keyring.asc
+sudo pacman-key --lsign-key 4795EA54BDDDEAA6C8145A1EB482297ABFCE2726
+
+sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+[eleos]
+SigLevel = Required DatabaseRequired
+Server = https://nexryai.github.io/eleos/pacman/$arch
+EOF
+
+sudo pacman -Syu
+sudo pacman -S eleos
+```
+
+上記のフィンガープリントはリポジトリの README に記載されている値です。鍵が変更された場合は [パッケージリポジトリのページ](https://nexryai.github.io/eleos/) を確認してから新しい鍵を信頼してください。
+
+## Snap
+
+```sh
+sudo snap install eleos
+sudo snap connect eleos:firewall-control
+```
+
+Snap 版は strict confinement で動作します。`firewall-control` の手動接続が必要です。設定ファイルは `/var/snap/eleos/current/eleos.yml`、CLI は `sudo eleos.elctl apply` です。
+
+Snap のデーモンは15秒ごとにファイルを確認し、初回と変更時に適用します。初期設定を手動で進める場合は `sudo snap stop eleos.daemon` で停止し、設定を編集してから `sudo snap start eleos.daemon` で起動してください。Snap 版にはネイティブ版の `eleos.service` の手順を使いません。
+
+## ソースからビルド
+
+Git と、`go.mod` のバージョン要件を満たす Go ツールチェーンが必要です。以下をクローンしたリポジトリで実行します。最後の `install` は `/etc/eleos.yml` を上書きするため、既存の設定がある場合は先にバックアップしてください。
+
+```sh
+git clone https://github.com/nexryai/eleos.git
+cd eleos
+CGO_ENABLED=0 go build -o elctl main.go
+
+sudo install -m 0755 elctl /usr/bin/elctl
+sudo install -m 0644 systemd/eleos.service /etc/systemd/system/eleos.service
+sudo install -m 0644 config.default.yml /etc/eleos.yml
+sudo systemctl daemon-reload
+```
+
+## 次の手順
+
+ネイティブパッケージとソースビルドでは `/etc/eleos.yml` を読み込みます。このファイルを編集し、[初期設定](/ja/getting-started) に沿って適用と自動起動を設定してください。

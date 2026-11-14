@@ -1,0 +1,80 @@
+---
+title: "初期設定"
+description: "管理用の接続を許可し、ルールの適用と自動起動を設定します。"
+---
+
+## 接続を復旧できる手段を確保する
+
+有効化する前に競合するファイアウォール管理サービスを無効にし、コンソールへのアクセスを確保してください。新しい SSH 接続には受信許可ルールが必要です。確立済み接続は先に許可されるため、既存の SSH セッションが切れないことだけでは設定が正しいと判断できません。
+
+## ホスト用の設定を書く
+
+`/etc/eleos.yml` をバックアップしてから編集します。
+
+```sh
+sudo cp /etc/eleos.yml /etc/eleos.yml.bak
+sudo nano /etc/eleos.yml
+```
+
+次の例では送信通信、ping、HTTP、HTTPS を許可し、SSH を特定の送信元だけに制限します。`192.0.2.10/32` は説明用のアドレスです。実際の管理元 IP/CIDR に置き換え、必要なら SSH の22番ポートも変更してください。
+
+```yaml
+default:
+  allowAllIn: false
+  allowAllOut: true
+  allowAllFwd: false
+  allowPing: true
+  enableIPv6: true
+  enableLogging: true
+
+ports:
+  - port: 22
+    proto: tcp
+    allowIP: "192.0.2.10/32"
+  - port: 80
+    proto: tcp
+  - port: 443
+    proto: tcp
+```
+
+付属の初期設定は UDP 5353（mDNS）を開きますが、SSH は許可しません。上記の例はその設定を置き換え、mDNS を含めていません。必要なポートだけを残してください。
+
+## 適用して確認する
+
+ネイティブ版では systemd から起動すると、ルールの適用とサービス状態の管理を行えます。
+
+```sh
+sudo systemctl start eleos
+sudo systemctl status eleos
+sudo nft list table inet eleos
+```
+
+許可したアドレスから **新しい SSH 接続** を開き、公開するサービスへの接続も確認します。確認後、自動起動を有効にします。
+
+```sh
+sudo systemctl enable eleos
+```
+
+手動で一度だけ適用する場合は `sudo elctl enable` を使います。同じルールを適用しますが、systemd の自動起動は有効になりません。
+
+## 設定を変更する
+
+```sh
+sudo nano /etc/eleos.yml
+sudo elctl apply
+```
+
+ネイティブ版の CLI はファイルを監視しません。変更は適用コマンドの実行後に有効になります。systemd サービスが稼働中なら `sudo systemctl reload eleos` でも再適用できます。
+
+Snap 版では `/var/snap/eleos/current/eleos.yml` を編集します。`firewall-control` を接続するとデーモンが変更を自動適用します。手動適用には `sudo eleos.elctl apply` を使います。
+
+## 元の設定に戻す
+
+到達可能なコンソールからバックアップを戻して適用します。
+
+```sh
+sudo cp /etc/eleos.yml.bak /etc/eleos.yml
+sudo elctl apply
+```
+
+Eleos のルールを削除するには `sudo elctl disable`、自動起動も無効にするには `sudo systemctl disable --now eleos` を使います。Eleos のテーブルを削除しても他のツールのルールは残ります。Snap 版を無効化する前に [CLI とサービス](/ja/cli) を確認してください。

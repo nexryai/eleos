@@ -1,0 +1,95 @@
+---
+title: "路由与 NAT"
+description: "配置转发、地址伪装、DNS 重定向和 IPv4 端口转发。"
+---
+
+## 准备网络
+
+请单独配置接口地址、路由和可达的网关。Eleos 安装防火墙/NAT 规则，不配置接口、DHCP、DNS 服务器或内核转发。请将下面的接口名和示例地址替换为实际值。
+
+路由 IPv4 流量时，检查并启用内核转发：
+
+```sh
+sysctl net.ipv4.ip_forward
+sudo sysctl -w net.ipv4.ip_forward=1
+```
+
+通过发行版的 sysctl 配置持久化。Eleos 只读取该值，并在其为0时警告。IPv6 路由也需要相应的内核转发配置。
+
+以 [首次配置](/zh-CN/getting-started) 的主机配置为起点，保留 `allowAllFwd: false`，将以下片段加入 **同一个 YAML 文件**。这些片段不是独立、完整的主机配置。
+
+## LAN 到 WAN 转发与地址伪装
+
+```yaml
+router:
+  configAsRouter: true
+  wanInterface: eth0
+  privateNetworks: ["192.168.10.0/24"]
+  lanInterfaces: [eth1]
+```
+
+| 字段 | 行为 |
+| --- | --- |
+| `configAsRouter` | 启用路由转发规则，以及已建立/关联连接的转发放行。 |
+| `wanInterface` | 私有网络地址伪装所使用的出站接口。 |
+| `privateNetworks` | 离开 WAN 时需要伪装的源 CIDR。IPv6 CIDR 也可以生成 NAT66 地址伪装规则。 |
+| `lanInterfaces` | 允许转发流量进入的接口。 |
+
+**LAN 转发权限较宽。** `lanInterfaces` 规则允许来自所列接口的转发流量，不限定目标必须为 WAN，也不限定源地址必须属于 `privateNetworks`。`privateNetworks` 限制的是地址伪装，而非这些转发权限。用于网络分区时，请先核对隔离要求。
+
+## 自定义路由与 DNS 重定向
+
+```yaml
+router:
+  configAsRouter: true
+  wanInterface: eth0
+  privateNetworks: ["192.168.10.0/24"]
+  lanInterfaces: [eth1]
+  forceDNS: "192.168.10.1"
+  customRoutes:
+    - allowIP: "10.0.10.0/24"
+      allowInterface: wg1
+      allowDST: "192.168.10.0/24"
+```
+
+`customRoutes` 允许同时匹配源地址 `allowIP`、入站接口 `allowInterface` 和目标地址 `allowDST` 的转发流量，并添加相应的地址伪装规则。这些是防火墙/NAT 规则，不是操作系统路由表条目。
+
+`forceDNS` 将从 LAN 接口进入、目标端口为53的 TCP/UDP 流量重定向至指定 IPv4 地址，但排除已经发往该解析器的流量及实现中的本地主机源地址例外。它不配置或启动 DNS 解析器，也不阻止 DNS-over-HTTPS/TLS。如果解析器运行在 Eleos 主机上，还需在 `ports` 中为指定 LAN 源地址允许 TCP/UDP 53。
+
+## IPv4 端口转发
+
+保留上面的路由器配置，以允许已建立/关联连接的转发，然后添加：
+
+```yaml
+nat:
+  - interface: eth0
+    allowIP: "198.51.100.0/24"
+    dstIP: "203.0.113.10"
+    dstPort: "8443"
+    proto: tcp
+    natTo: "192.168.10.20:443"
+```
+
+该示例匹配从 `198.51.100.0/24` 经 `eth0` 发往 `203.0.113.10` 的 TCP 8443，将其转换为 `192.168.10.20:443`。公网地址仅用于文档示例，请使用实际分配或路由到网关的地址，并确保目标和返回路径可达。
+
+| 字段 | 含义 |
+| --- | --- |
+| `interface` | DNAT 的入站接口；对应返回流量 SNAT 规则的出站接口。 |
+| `allowIP` | 允许转发的源 IP/CIDR，请显式指定。`0.0.0.0/0` 表示任意 IPv4 源地址。 |
+| `dstIP` | 原始目标 IPv4 地址，不含 CIDR。 |
+| `dstPort` | 字符串形式的原始目标端口。 |
+| `proto` | 显式指定 `tcp` 或 `udp`。 |
+| `natTo` | IPv4 目标和端口，例如 `192.168.10.20:443`。 |
+
+实现会添加匹配入站接口和源地址的 forward 允许规则，但不会将该规则限制到转换后的目标或端口。对应的 SNAT 规则匹配目标主机的源地址和出站接口。请根据拓扑检查生成的规则。
+
+不启用路由器模式也能生成端口转发规则，但此路径不会在 forward 链添加通用的已建立/关联连接放行。`allowAllFwd: false` 时，回复可能被丢弃。不要将仅有 NAT 的配置视为完整的转发方案。
+
+## 验证
+
+```sh
+sudo elctl apply
+sudo nft list table inet eleos
+```
+
+从另一台客户端检查内核转发、实际接口名称、路由和双向连接。当前实现中，`forceDNS` 和显式 `nat` 目标仅支持 IPv4；IPv6 过滤和私有网络地址伪装属于其他功能。

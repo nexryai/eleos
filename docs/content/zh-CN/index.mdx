@@ -1,0 +1,29 @@
+---
+title: "Eleos 防火墙"
+description: "使用 YAML 配置、通过 nftables 工作的轻量级 Linux 防火墙。"
+---
+
+## 用一个文件管理防火墙规则
+
+Eleos 通过 netlink 直接操作 Linux nftables。将入站端口、出站访问、IP 限制和路由设置写入 YAML，再使用 `elctl` 应用。项目使用 Go 编写，采用 MIT 许可证，目前仍在开发中。
+
+## 从这里开始
+
+1. 通过软件包仓库、Snap 或源码 [安装 Eleos](/zh-CN/installation)。
+2. 在保留服务器访问通道的前提下 [应用首次配置](/zh-CN/getting-started)。
+3. 添加限制前，阅读 [配置参考](/zh-CN/configuration)。
+
+## Eleos 管理哪些规则
+
+Eleos 创建名为 `eleos` 的 `inet` 表，通过 input、output 和 forward 链控制流量。IPv4 和 IPv6 共用这张表。重新应用配置时，Eleos 在一个 netlink 批次中替换自己的表；禁用时删除该表。其他 nftables 表仍然存在，也可能影响流量。
+
+入站规则支持 TCP/UDP 端口、源地址或 CIDR、命名地址组和入站接口限制。此外还提供出站允许规则、端口扫描及 SYN flood 缓解、路由器地址伪装、DNS 重定向和 IPv4 端口转发。
+
+## 指南与参考
+
+- [配置参考](/zh-CN/configuration)：YAML 各字段及其实际行为。
+- [路由与 NAT](/zh-CN/networking)：LAN 转发、地址伪装和端口转发。
+- [CLI 与服务](/zh-CN/cli)：应用变更、开机启动和 Snap 行为。
+- [故障排查](/zh-CN/troubleshooting)：权限、连接问题与诊断。
+
+文档依据 [Eleos 仓库](https://github.com/nexryai/eleos) 中的 `main.go`、`internal/config` 和 `internal/firewall` 等实现编写。仓库中的 `config.default.yml` 和更完整的 `config.yml` 可作为起点，请按实际网络修改。

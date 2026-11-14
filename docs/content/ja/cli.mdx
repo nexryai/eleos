@@ -1,0 +1,86 @@
+---
+title: "CLI とサービス"
+description: "コマンド構文、systemd・Snap の管理、開発時の確認方法。"
+---
+
+## コマンド
+
+ネイティブ版の操作は管理者権限で実行します。最初の位置引数が操作名です。
+
+| コマンド | 動作 |
+| --- | --- |
+| `sudo elctl enable` | 設定を読み、ルールを適用します。自動起動は有効にしません。 |
+| `sudo elctl apply` | 設定を読み、Eleos のテーブルを置き換えます。`enable` と同じ適用処理です。 |
+| `sudo elctl disable` | `inet eleos` テーブルがあれば削除します。設定ファイルは読みません。 |
+| `elctl` | 使用方法を表示します。 |
+
+`status`、`reload`、`validate`、`dry-run` は CLI のサブコマンドではありません。サービスやルールの確認には systemd と `nft` を使います。
+
+## オプションは操作名より前に置く
+
+Go のフラグ解析は最初の位置引数で止まります。`-f` と `-debug` は `enable`・`apply`・`disable` の **前** に指定してください。
+
+```sh
+sudo elctl -f /etc/eleos-test.yml apply
+sudo elctl -debug apply
+sudo elctl -debug -f /etc/eleos-test.yml enable
+```
+
+`-f` の既定値は `/etc/eleos.yml` です。`-debug` は診断ログを有効にします。別の設定ファイルを適用しても同じ `inet eleos` テーブルを置き換えます。独立した別のファイアウォールは作りません。
+
+ルールの構築は netlink バッチの反映より前に行います。構築時にエラーが出た場合、その適用処理では現在のテーブルを置き換えません。YAML の解析だけで危険な設定や未対応の設定をすべて検出できるわけではありません。
+
+## ネイティブ版の systemd サービス
+
+```sh
+sudo systemctl start eleos
+sudo systemctl enable eleos
+sudo systemctl reload eleos
+sudo systemctl status eleos
+sudo journalctl -u eleos -b
+```
+
+ユニットは `Type=oneshot` と `RemainAfterExit=yes` を使うため、`active (exited)` は正常な表示です。`ExecStart` は `elctl enable`、`ExecReload` は `elctl apply`、`ExecStop` は `elctl disable` を実行します。機能を `CAP_NET_ADMIN` に制限し、その他の保護設定も適用しています。
+
+自動起動を無効にし、サービスも停止する場合：
+
+```sh
+sudo systemctl disable --now eleos
+```
+
+手動の `elctl` 操作は systemd のサービス状態を更新しません。状態が一致しない可能性がある場合は実際のテーブルを確認してください。
+
+## Snap 版のサービス
+
+```sh
+sudo snap connect eleos:firewall-control
+sudo snap services eleos
+sudo eleos.elctl apply
+sudo snap logs eleos.daemon
+```
+
+ラッパーは `/var/snap/eleos/current/eleos.yml` を選択します。デーモンは15秒ごとに設定のハッシュを確認し、初回・変更時・適用失敗後の再試行時にルールを適用します。ネイティブ版の systemd コマンドではこのデーモンを管理しません。
+
+Snap 版のファイアウォールを継続して無効にするには、デーモンを無効化し、テーブルも削除します。
+
+```sh
+sudo snap stop --disable eleos.daemon
+sudo eleos.elctl disable
+```
+
+デーモンを止めるだけでは既に適用されたルールは消えません。デーモンを動かしたまま `disable` すると、その後の設定変更やデーモンの再起動で再適用される場合があります。再開する場合：
+
+```sh
+sudo snap start --enable eleos.daemon
+```
+
+## 開発用のビルドとテスト
+
+`go.mod` が要求する Go を用意し、Eleos リポジトリのルートで実行します。
+
+```sh
+CGO_ENABLED=0 go build -o elctl main.go
+CGO_ENABLED=0 go test ./...
+```
+
+ユニットテストはアドレス処理とルール構築を検証します。`integration/` のテストには `integration` ビルドタグ、root 権限、ビルド済みバイナリ、ネットワーク名前空間や nftables のツールが必要です。隔離したテスト環境でのみ実行し、必要な構成はリポジトリの統合テストと CI ワークフローを確認してください。

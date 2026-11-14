@@ -1,0 +1,99 @@
+---
+title: "設定リファレンス"
+description: "YAML の項目、付属設定の値、ルールの評価順序と制限事項。"
+---
+
+## 設定ファイルと初期値
+
+ネイティブ版は `/etc/eleos.yml`、Snap 版は `/var/snap/eleos/current/eleos.yml` を読み込みます。インデントには空白を使い、YAML のマッピング形式で記述します。ネイティブ版では編集後に `sudo elctl apply` を実行してください。
+
+**省略した真偽値は `false` です。** YAML は Go の構造体に直接読み込まれ、付属の初期設定とはマージされません。以下の値は `config.default.yml` の内容であり、キーを省略した場合の暗黙の初期値ではありません。未知のキーはエラーにならないため、綴りを確認してください。dry-run や設定検証専用のコマンドはありません。
+
+## `default`
+
+| キー | 付属設定の値 | 動作 |
+| --- | --- | --- |
+| `allowAllIn` | `false` | input の基本ポリシー。true なら許可、false なら拒否。先行する明示的な拒否ルールは引き続き適用されます。有効時に警告します。 |
+| `allowAllOut` | `true` | output の基本ポリシー。true の場合は送信制限用のルール生成を省略します。 |
+| `allowAllFwd` | `false` | forward の基本ポリシー。true は広範囲の転送を許可し、警告を出します。 |
+| `allowPing` | `true` | IPv4/IPv6 の echo-request を毎秒4回・バースト5で許可し、超過分を破棄します。 |
+| `enableIPv6` | `true` | 近隣探索など一部の ICMPv6 ルールを追加します。false にしても IPv6 自体や IPv6 のポートルールは無効になりません。 |
+| `enableLogging` | 省略（`false`） | 対象チェーンの末尾に input/output の拒否ログを追加します。false でも保護機能固有のログは出る場合があります。 |
+
+受信では後段のアドレス制限より先に確立済み・関連接続とループバックを許可します。不正な通信の破棄や保護ルールも、設定したポート許可より前に処理します。`allowAllIn` は先行するすべてのルールを迂回するスイッチではありません。
+
+## `ipset` と `ports`
+
+```yaml
+ipset:
+  - name: TRUSTED
+    ip: ["192.0.2.10/32", "2001:db8::10/128"]
+
+ports:
+  - port: 22
+    proto: tcp
+    allowIP: "$TRUSTED"
+    allowInterface: eth0
+  - port: 443
+    proto: tcp
+```
+
+| 項目 | 意味 |
+| --- | --- |
+| `ipset[].name` | `ports[].allowIP` から `$NAME` 形式で参照するグループ名。 |
+| `ipset[].ip` | IPv4/IPv6 のアドレスまたは CIDR の一覧。 |
+| `ports[].port` | 数値の宛先ポート。有効な単一ポート（1〜65535）を指定します。範囲指定には対応しません。 |
+| `ports[].proto` | `tcp` または `udp`。省略すると **両方** を許可します。 |
+| `ports[].allowIP` | 送信元 IP、CIDR、または `$NAME`。省略時は送信元の制限なし。未定義のグループ参照はエラーです。 |
+| `ports[].allowInterface` | 受信インターフェイス名。省略時はインターフェイスの制限なし。 |
+
+ひとつのルール内のアドレス・インターフェイス・プロトコル・ポートの条件は、すべて一致する必要があります。`$NAME` の展開は受信ポートの `allowIP` 用であり、任意のアドレス項目には使えません。例のアドレスは説明用です。
+
+## `security`
+
+```yaml
+security:
+  alwaysDenyIP: ["192.0.2.99", "2001:db8::99"]
+  disablePortScanProtection: false
+  disableIpFragmentsBlock: false
+```
+
+`alwaysDenyIP` はポート許可より前に送信元の拒否ルールを追加しますが、確立済み・関連接続とループバックの許可より後に評価されます。送信や転送通信を拒否する設定ではなく、既存セッションをすべて切断するものでもありません。
+
+`disablePortScanProtection: false` では TCP XMAS・NULL・小さな MSS の検査を追加します。`disableIpFragmentsBlock: false` では IPv4 の非ゼロのフラグメントオフセットを検査します。両項目は省略時に false となり、明示的に無効化しない限り保護が有効です。SYN flood の制限は独立しており、SYN 通信を毎秒30回・バースト60のチェーンに送り、超過分を破棄します。
+
+## `outbound`
+
+`default.allowAllOut` が `false` の場合に生成します。アプリケーション単位の完全な送信制御ではありません。実装では一部の ICMP/ICMPv6、IPv4 のローカルホスト宛て通信、初期 SYN のフラグ条件に一致しない TCP パケットも許可します。
+
+```yaml
+outbound:
+  compatibility: [tailscale, cloudflare_tunnel]
+  allowed:
+    - dport: "53"
+      proto: udp
+    - dport: "53"
+      proto: tcp
+    - dport: "443"
+      proto: tcp
+    - dport: "5432"
+      proto: tcp
+      dstIP: "192.0.2.0/24"
+```
+
+| 項目 | 意味 |
+| --- | --- |
+| `allowed[].dport` | 文字列で表した単一の宛先ポート。 |
+| `allowed[].proto` | `tcp` または `udp`。省略時は両方。 |
+| `allowed[].dstIP` | 任意の宛先 IP/CIDR。`$NAME` の展開は行いません。 |
+| `compatibility` | 対応する値は `tailscale` と `cloudflare_tunnel`。 |
+
+`tailscale` は UDP 41641・3478、`cloudflare_tunnel` は TCP/UDP 7844 と TCP 443 を追加します。これは Eleos が追加するポートの一覧であり、DNS などアプリケーションに必要なすべての通信を自動許可するものではありません。送信を制限する場合は、サービスからの UDP 応答なども必要に応じて明示的に許可してください。
+
+## `router` と `nat`
+
+例と制限事項は [ルーティングと NAT](/ja/networking) を参照してください。`router` の項目は `configAsRouter`、`wanInterface`、`privateNetworks`、`lanInterfaces`、`forceDNS`、`customRoutes` です。`nat` の各エントリーは `interface`、`allowIP`、`dstIP`、`dstPort`、`proto`、`natTo` を指定します。
+
+## デバッグ関連の項目
+
+トップレベルの YAML キー `debugMode` は読み込まれますが、CLI は `-debug` フラグでログ出力を切り替えます。`sudo elctl -debug apply` を使ってください。YAML の `debugMode: true` に依存しないでください。

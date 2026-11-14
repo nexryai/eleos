@@ -1,0 +1,29 @@
+---
+title: "Eleos firewall"
+description: "YAML で設定し、nftables を直接操作する軽量な Linux ファイアウォール。"
+---
+
+## ファイアウォールの設定を、ひとつのファイルに
+
+Eleos は netlink を通して Linux の nftables を直接操作します。受信ポート、送信制限、IP アドレス制限、ルーター設定を YAML に記述し、`elctl` で適用します。Go で実装され、MIT ライセンスで公開されています。現在開発中のプロジェクトです。
+
+## はじめに
+
+1. パッケージリポジトリ、Snap、またはソースから [インストール](/ja/installation) します。
+2. サーバーへの接続を維持しながら [最初の設定を適用](/ja/getting-started) します。
+3. 制限を追加する前に [設定リファレンス](/ja/configuration) を確認します。
+
+## Eleos が管理するもの
+
+Eleos は `eleos` という名前の `inet` テーブルを作成し、input・output・forward チェーンで通信を制御します。IPv4 と IPv6 は同じテーブルで処理します。再適用では自身のテーブルをひとつの netlink バッチで置き換え、無効化ではそのテーブルを削除します。他の nftables テーブルは残り、通信に影響する場合があります。
+
+受信ルールでは TCP/UDP のポート、送信元 IP/CIDR、名前付きアドレスグループ、受信インターフェイスを指定できます。送信の許可ルール、ポートスキャンや SYN flood の緩和、ルーターのマスカレード、DNS リダイレクト、IPv4 ポート転送にも対応します。
+
+## ガイドとリファレンス
+
+- [設定リファレンス](/ja/configuration)：YAML の各項目と実際の動作。
+- [ルーティングと NAT](/ja/networking)：LAN の転送、マスカレード、ポート転送。
+- [CLI とサービス](/ja/cli)：設定の適用、自動起動、Snap 版の動作。
+- [トラブルシューティング](/ja/troubleshooting)：権限、接続、診断方法。
+
+このドキュメントは [Eleos リポジトリ](https://github.com/nexryai/eleos) の `main.go`、`internal/config`、`internal/firewall` などの実装に基づいています。付属の `config.default.yml` と詳細な `config.yml` は設定の出発点です。実際のネットワークに合わせて変更してください。

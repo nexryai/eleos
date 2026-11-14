@@ -1,0 +1,86 @@
+---
+title: "CLI 与服务"
+description: "命令语法、systemd 生命周期、Snap 守护进程和开发检查。"
+---
+
+## 命令
+
+原生安装的操作需要管理权限。第一个位置参数表示操作。
+
+| 命令 | 行为 |
+| --- | --- |
+| `sudo elctl enable` | 读取配置并应用规则，不会启用开机服务。 |
+| `sudo elctl apply` | 读取配置并替换 Eleos 表，与 `enable` 使用相同的应用流程。 |
+| `sudo elctl disable` | 如果存在则删除 `inet eleos` 表，不读取配置文件。 |
+| `elctl` | 显示使用说明。 |
+
+`status`、`reload`、`validate` 和 `dry-run` 不是 CLI 子命令。请使用 systemd 和 `nft` 检查服务及规则。
+
+## 选项放在操作名之前
+
+Go 的参数解析器遇到第一个位置参数就会停止解析选项。请将 `-f` 和 `-debug` 放在 `enable`、`apply` 或 `disable` **之前**：
+
+```sh
+sudo elctl -f /etc/eleos-test.yml apply
+sudo elctl -debug apply
+sudo elctl -debug -f /etc/eleos-test.yml enable
+```
+
+`-f` 默认为 `/etc/eleos.yml`，`-debug` 启用诊断日志。应用自定义文件仍然替换同一个 `inet eleos` 表，不会创建第二个独立防火墙。
+
+规则在提交 netlink 批次之前构建。如果规则构建失败，该次应用不会替换当前表。仅解析 YAML 并不能检测所有不安全或不支持的设置。
+
+## 原生 systemd 服务
+
+```sh
+sudo systemctl start eleos
+sudo systemctl enable eleos
+sudo systemctl reload eleos
+sudo systemctl status eleos
+sudo journalctl -u eleos -b
+```
+
+单元使用 `Type=oneshot` 和 `RemainAfterExit=yes`，因此显示 `active (exited)` 属于正常情况。`ExecStart` 执行 `elctl enable`，`ExecReload` 执行 `elctl apply`，`ExecStop` 执行 `elctl disable`。该服务将能力限制为 `CAP_NET_ADMIN`，并启用其他加固设置。
+
+禁用开机启动并停止服务：
+
+```sh
+sudo systemctl disable --now eleos
+```
+
+手动运行 `elctl` 不会更新 systemd 服务状态。两者可能不一致时，请检查实际表内容。
+
+## Snap 服务
+
+```sh
+sudo snap connect eleos:firewall-control
+sudo snap services eleos
+sudo eleos.elctl apply
+sudo snap logs eleos.daemon
+```
+
+包装脚本选择 `/var/snap/eleos/current/eleos.yml`。守护进程每15秒计算配置哈希，在首次运行、配置变化以及应用失败后的重试过程中应用规则。原生 systemd 命令不管理此守护进程。
+
+要持续禁用 Snap 防火墙，需要同时禁用守护进程并删除规则表：
+
+```sh
+sudo snap stop --disable eleos.daemon
+sudo eleos.elctl disable
+```
+
+仅停止守护进程不会删除已经应用的规则。守护进程仍在运行时执行 `disable`，后续配置变更或守护进程重启可能再次应用规则。恢复运行：
+
+```sh
+sudo snap start --enable eleos.daemon
+```
+
+## 开发构建与测试
+
+准备满足 `go.mod` 要求的 Go 工具链，在 Eleos 仓库根目录运行：
+
+```sh
+CGO_ENABLED=0 go build -o elctl main.go
+CGO_ENABLED=0 go test ./...
+```
+
+单元测试覆盖地址处理和规则构建。`integration/` 中的测试需要 `integration` 构建标签、root 权限、已构建的二进制，以及网络命名空间/nftables 工具。请仅在隔离测试环境运行；所需环境见仓库的集成测试和 CI 工作流。

@@ -1,0 +1,80 @@
+---
+title: "First configuration"
+description: "Allow administrative access, apply host rules and enable boot persistence."
+---
+
+## Keep a way back in
+
+Before enabling Eleos, disable conflicting firewall managers and keep console access available. A new SSH connection must match an allowed inbound rule. Existing established connections are accepted early, so an open SSH session alone does not prove that your new rules work.
+
+## Write a host configuration
+
+Back up `/etc/eleos.yml`, then edit it:
+
+```sh
+sudo cp /etc/eleos.yml /etc/eleos.yml.bak
+sudo nano /etc/eleos.yml
+```
+
+This example permits outbound traffic, ping, HTTP and HTTPS, and limits SSH to one source address. Replace `192.0.2.10/32` with your actual administrative IP/CIDR and change port 22 if needed. The example address is a documentation placeholder.
+
+```yaml
+default:
+  allowAllIn: false
+  allowAllOut: true
+  allowAllFwd: false
+  allowPing: true
+  enableIPv6: true
+  enableLogging: true
+
+ports:
+  - port: 22
+    proto: tcp
+    allowIP: "192.0.2.10/32"
+  - port: 80
+    proto: tcp
+  - port: 443
+    proto: tcp
+```
+
+The shipped default configuration opens UDP 5353 (mDNS) and does **not** open SSH. The example above replaces that configuration and omits mDNS. Keep only the ports you need.
+
+## Apply and verify
+
+For a native installation, use systemd to apply the rules and track the service state:
+
+```sh
+sudo systemctl start eleos
+sudo systemctl status eleos
+sudo nft list table inet eleos
+```
+
+Open a **new** SSH connection from the allowed address and verify the services you intend to expose. Once verified, enable boot persistence:
+
+```sh
+sudo systemctl enable eleos
+```
+
+For a one-time manual application, `sudo elctl enable` applies the same rules. It does not enable the systemd service at boot.
+
+## Change rules later
+
+```sh
+sudo nano /etc/eleos.yml
+sudo elctl apply
+```
+
+The native CLI does not watch the file. Changes take effect when you apply them. If the systemd service is active, `sudo systemctl reload eleos` also reapplies the configuration.
+
+For Snap, edit `/var/snap/eleos/current/eleos.yml`. After connecting `firewall-control`, the daemon applies changes automatically, or you can run `sudo eleos.elctl apply` manually.
+
+## Roll back
+
+From a reachable console, restore your backup and apply it:
+
+```sh
+sudo cp /etc/eleos.yml.bak /etc/eleos.yml
+sudo elctl apply
+```
+
+To remove Eleos rules, run `sudo elctl disable`; to disable boot activation too, run `sudo systemctl disable --now eleos`. Removing the Eleos table does not remove rules from other firewall tools. For Snap, see [CLI and services](/en/cli) before disabling rules.

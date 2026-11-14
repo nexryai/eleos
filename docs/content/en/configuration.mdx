@@ -1,0 +1,99 @@
+---
+title: "Configuration reference"
+description: "YAML fields, shipped values, rule ordering and implementation limits."
+---
+
+## File and defaults
+
+Native installations read `/etc/eleos.yml`; Snap reads `/var/snap/eleos/current/eleos.yml`. Use YAML mappings with spaces for indentation. Run `sudo elctl apply` after editing a native installation.
+
+**Omitted booleans are `false`.** Eleos unmarshals YAML into Go structs without merging the shipped default file. The values below are those in `config.default.yml`, not implicit defaults for missing keys. Unknown YAML keys are not rejected, so check spelling carefully. There is no dry-run or standalone validation command.
+
+## `default`
+
+| Key | Shipped value | Behavior |
+| --- | --- | --- |
+| `allowAllIn` | `false` | Input chain policy: accept when true, drop when false. Explicit earlier drop rules still apply. Warns when enabled. |
+| `allowAllOut` | `true` | Output chain policy. When true, the restricted-output rule builder is skipped. |
+| `allowAllFwd` | `false` | Forward chain policy. Setting true broadly permits forwarding and produces a warning. |
+| `allowPing` | `true` | Adds IPv4/IPv6 echo-request rules with a rate of 4/second and burst 5; excess requests are dropped. |
+| `enableIPv6` | `true` | Adds selected ICMPv6 rules, including neighbor discovery. Does **not** disable IPv6 or IPv6 port rules when false. |
+| `enableLogging` | omitted (`false`) | Adds final input/output drop logging where those rules are built. Protection-specific logging may still occur when false. |
+
+Input accepts established/related connections and loopback traffic before later address restrictions. It also drops invalid traffic and applies protection rules before configured port allowances. Do not treat `allowAllIn` as a switch that bypasses every earlier rule.
+
+## `ipset` and `ports`
+
+```yaml
+ipset:
+  - name: TRUSTED
+    ip: ["192.0.2.10/32", "2001:db8::10/128"]
+
+ports:
+  - port: 22
+    proto: tcp
+    allowIP: "$TRUSTED"
+    allowInterface: eth0
+  - port: 443
+    proto: tcp
+```
+
+| Field | Meaning |
+| --- | --- |
+| `ipset[].name` | Group name referenced as `$NAME` by `ports[].allowIP`. |
+| `ipset[].ip` | List of IPv4/IPv6 addresses or CIDRs. |
+| `ports[].port` | Numeric destination port. Use a valid single port, 1–65535; port ranges are not supported. |
+| `ports[].proto` | `tcp` or `udp`; omitted means **both**. |
+| `ports[].allowIP` | Source IP, CIDR or `$NAME`. Omitted means no source-address restriction. An unknown group causes an error. |
+| `ports[].allowInterface` | Incoming interface name. Omitted means no interface restriction. |
+
+Address, interface, protocol and port constraints on one rule must all match. `$NAME` references are implemented for inbound port rules, not for arbitrary address fields. The addresses in these examples are documentation placeholders.
+
+## `security`
+
+```yaml
+security:
+  alwaysDenyIP: ["192.0.2.99", "2001:db8::99"]
+  disablePortScanProtection: false
+  disableIpFragmentsBlock: false
+```
+
+`alwaysDenyIP` adds input source-address drop rules before port allowances, but **after** established/related and loopback acceptance. It does not block outbound or forwarded traffic, and does not terminate all existing sessions.
+
+With `disablePortScanProtection: false`, Eleos adds TCP XMAS, NULL and small-MSS checks. `disableIpFragmentsBlock: false` adds an IPv4 nonzero-fragment-offset check. These switches default to false when omitted, so these protections are enabled unless explicitly disabled. SYN flood limiting is separate: SYN traffic jumps to a chain with a rate of 30/second and burst 60, dropping excess traffic.
+
+## `outbound`
+
+These rules are built when `default.allowAllOut` is `false`. They are not a complete application-level egress policy: the implementation also permits certain ICMP/ICMPv6 traffic, IPv4 localhost traffic and TCP packets without the initial SYN flag pattern.
+
+```yaml
+outbound:
+  compatibility: [tailscale, cloudflare_tunnel]
+  allowed:
+    - dport: "53"
+      proto: udp
+    - dport: "53"
+      proto: tcp
+    - dport: "443"
+      proto: tcp
+    - dport: "5432"
+      proto: tcp
+      dstIP: "192.0.2.0/24"
+```
+
+| Field | Meaning |
+| --- | --- |
+| `allowed[].dport` | A single destination port, represented as a string. |
+| `allowed[].proto` | `tcp` or `udp`; omitted expands to both. |
+| `allowed[].dstIP` | Optional destination IP/CIDR, without `$NAME` expansion. |
+| `compatibility` | Recognized values: `tailscale`, `cloudflare_tunnel`. |
+
+`tailscale` adds UDP 41641 and 3478. `cloudflare_tunnel` adds TCP/UDP 7844 and TCP 443. These are exactly the extra ports added by Eleos; they do not automatically allow DNS or all other traffic those applications might need. With restricted output, explicitly allow required UDP replies from services too.
+
+## `router` and `nat`
+
+See [Routing and NAT](/en/networking) for examples and limits. `router` contains `configAsRouter`, `wanInterface`, `privateNetworks`, `lanInterfaces`, `forceDNS` and `customRoutes`. Each `nat` entry contains `interface`, `allowIP`, `dstIP`, `dstPort`, `proto` and `natTo`.
+
+## Debugging fields
+
+The top-level `debugMode` YAML key is parsed, but the CLI uses its `-debug` flag to set debug logging. Use `sudo elctl -debug apply`; do not rely on `debugMode: true` in YAML.
